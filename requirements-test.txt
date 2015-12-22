@@ -1,3 +1,0 @@
--r requirements.txt
-moto==0.4.19
-pytest==2.8.5
