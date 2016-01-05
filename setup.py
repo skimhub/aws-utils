@@ -3,27 +3,15 @@ from setuptools import setup, find_packages
 package = 'aws-utils'
 version = '0.1.0-SNAPSHOT'
 
-# TODO: since this should be used as a library the versions should not
-# be pinned down so aggressively
 INSTALL_REQUIRES = [
-    'boto==2.38.0',
-    'boto3==1.2.3',
-    'botocore==1.3.14',
-    'bz2file==0.98',
-    'docutils==0.12',
-    'futures==3.0.3',
-    'httpretty==0.8.10',
-    'jmespath==0.9.0',
-    'python-dateutil==2.4.2',
-    'requests==2.8.1',
-    'six==1.10.0',
-    'smart-open==1.3.1',
-    'wheel==0.24.0',
+    'boto>=2.38.0,<3.0.0',
+    'boto3>=1.2.3,<1.3.0',
+    'smart-open>=1.3.1,<1.4.0',
 ]
 
 TEST_REQUIRES = [
-    'moto==0.4.19',
-    'pytest==2.8.5',
+    'moto>=0.4.19,<0.5.0',
+    'pytest>=2.8.5,<2.9.0',
 ]
 
 setup(
