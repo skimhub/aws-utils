@@ -1,9 +1,10 @@
 from setuptools import setup, find_packages
 
 package = 'aws-utils'
-version = '0.1'
+version = '0.1.0-SNAPSHOT'
 
-
+# TODO: since this should be used as a library the versions should not
+# be pinned down so aggressively
 INSTALL_REQUIRES = [
     'boto==2.38.0',
     'boto3==1.2.3',
@@ -28,10 +29,11 @@ TEST_REQUIRES = [
 setup(
     name=package,
     version=version,
+    author="Skimlinks Ltd.",
+    author_email="dev@skimlinks.com",
     description="collection of AWS useful functions",
     url='https://github.com/skimhub/aws-utils',
-    packages=find_packages(),
-    package_data={'': ['requirements.txt']},
+    packages=find_packages(exclude=['test']),
     install_requires=INSTALL_REQUIRES,
     test_requires=TEST_REQUIRES,
 )
