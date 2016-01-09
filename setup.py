@@ -1,7 +1,14 @@
+import subprocess
+
 from setuptools import setup, find_packages
 
+
+def _git_sha():
+    proc = subprocess.Popen('git rev-parse HEAD', shell=True, stdout=subprocess.PIPE)
+    return proc.communicate()[0].strip()
+
 package = 'aws-utils'
-version = '0.1.0-SNAPSHOT'
+version = '0.1.0-{}'.format(_git_sha())
 
 INSTALL_REQUIRES = [
     'boto>=2.38.0,<3.0.0',
