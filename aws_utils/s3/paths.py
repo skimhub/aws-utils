@@ -22,3 +22,9 @@ def delete_path(bucket, path):
         k.delete()
     except S3ResponseError:
         logger.debug("Could not delete metadata")
+
+
+def path_exists(bucket, path):
+    """Check if a given path exists
+    """
+    return bool(bucket.get_key(path, validate=True))

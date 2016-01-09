@@ -15,4 +15,7 @@ def test_delete_path():
     k.key = 'some-path/file1'
     k.set_contents_from_string('Some content')
 
+    assert paths.path_exists(bucket, k.key)
     paths.delete_path(bucket, 'some-path')
+
+    assert not paths.path_exists(bucket, k.key)
