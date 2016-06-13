@@ -33,10 +33,12 @@ def get_pipeline_state(pipeline_name, region):
             pipeline_settings = boto3client_pipelines.describe_pipelines(pipelineIds=[pipeline['id']])
             pipeline_fields = pipeline_settings['pipelineDescriptionList'][0]['fields']
             pipeline_status = [item['stringValue'] for item in pipeline_fields if item['key'] == '@pipelineState']
-            if pipeline_status is not '':
-                return ''.join(pipeline_status)
-            else:
-                raise NoSuchActivityError('\tThe EMR status is empty')
+            current_status_pipeline = ''.join(pipeline_status)
+
+    if current_status_pipeline is not '':
+        return current_status_pipeline
+    else:
+        raise NoSuchActivityError('\tThe Pipeline status is empty')
 
 
 def get_emr_state(emr_name, region):
