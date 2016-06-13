@@ -7,6 +7,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+class NoSuchActivityError(Exception):
+    """
+    A custom exception
+    """
+
+
 def get_pipeline_state(pipeline_name, region):
     """
     Connects to AWS and gets a status of a pipeline
@@ -27,7 +33,10 @@ def get_pipeline_state(pipeline_name, region):
             pipeline_settings = boto3client_pipelines.describe_pipelines(pipelineIds=[pipeline['id']])
             pipeline_fields = pipeline_settings['pipelineDescriptionList'][0]['fields']
             pipeline_status = [item['stringValue'] for item in pipeline_fields if item['key'] == '@pipelineState']
-            return ''.join(pipeline_status)
+            if pipeline_status is not '':
+                return ''.join(pipeline_status)
+            else:
+                raise NoSuchActivityError('\tThe EMR status is empty')
 
 
 def get_emr_state(emr_name, region):
@@ -48,7 +57,10 @@ def get_emr_state(emr_name, region):
         if emr['Name'] == emr_name:
             current_status_sample_emr = emr['Status']['State']
 
-    return current_status_sample_emr
+    if current_status_sample_emr is not '':
+        return current_status_sample_emr
+    else:
+        raise NoSuchActivityError('\tThe cluster status is empty')
 
 
 def statuschecker(get_activity_state, activity_name, region, sleep, status):
@@ -66,12 +78,16 @@ def statuschecker(get_activity_state, activity_name, region, sleep, status):
     cluster_status = ''
     logger.info('\tPing status of the %s every %s seconds ...', activity_name, sleep)
     while check_status:
-        cluster_status = get_activity_state(activity_name, region)
-        time.sleep(sleep)
-        logger.info('\tCurrent status : %s', cluster_status)
-        if cluster_status == status:
-            logger.info('\tStatus is now %s',  cluster_status)
-            # reset the status to exit the loop
-            check_status = False
-            logger.info('\tStop the checker')
+        try:
+            cluster_status = get_activity_state(activity_name, region)
+            time.sleep(sleep)
+            logger.info('\tCurrent status : %s', cluster_status)
+            if cluster_status == status:
+                logger.info('\tStatus is now %s',  cluster_status)
+                # reset the status to exit the loop
+                check_status = False
+                logger.info('\tStop the checker')
+        except NoSuchActivityError as error:
+            logger.error(error)
+            break
     return cluster_status
