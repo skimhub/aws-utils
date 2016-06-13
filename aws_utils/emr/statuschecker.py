@@ -3,7 +3,7 @@ import boto3
 import logging
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -38,7 +38,7 @@ def get_pipeline_state(pipeline_name, region):
     if current_status_pipeline is not '':
         return current_status_pipeline
     else:
-        raise NoSuchActivityError('\tThe Pipeline status is empty')
+        raise NoSuchActivityError('The Pipeline status is empty')
 
 
 def get_emr_state(emr_name, region):
@@ -62,7 +62,7 @@ def get_emr_state(emr_name, region):
     if current_status_sample_emr is not '':
         return current_status_sample_emr
     else:
-        raise NoSuchActivityError('\tThe cluster status is empty')
+        raise NoSuchActivityError('The cluster status is empty')
 
 
 def statuschecker(get_activity_state, activity_name, region, sleep, status):
@@ -78,17 +78,17 @@ def statuschecker(get_activity_state, activity_name, region, sleep, status):
     """
     check_status = True
     cluster_status = ''
-    logger.info('\tPing status of the %s every %s seconds ...', activity_name, sleep)
+    logger.info('Ping status of the %s every %s seconds ...', activity_name, sleep)
     while check_status:
         try:
             cluster_status = get_activity_state(activity_name, region)
             time.sleep(sleep)
-            logger.info('\tCurrent status : %s', cluster_status)
+            logger.info('Current status : %s', cluster_status)
             if cluster_status == status:
-                logger.info('\tStatus is now %s',  cluster_status)
+                logger.info('Status is now %s',  cluster_status)
                 # reset the status to exit the loop
                 check_status = False
-                logger.info('\tStop the checker')
+                logger.info('Stop the checker')
         except NoSuchActivityError as error:
             logger.error(error)
             break
