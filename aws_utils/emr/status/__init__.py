@@ -24,4 +24,4 @@ def poller(status_getter, interval, callback):
                 return False
             time.sleep(interval)
     except Exception as e:
-        logger.exception('Unable to poll for status : ', e)
+        logger.exception('Unable to poll for status : %s', e)
