@@ -9,13 +9,14 @@ import boto3
 logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def get_emr_cluster_state(emr_cluster_name, emr_list_clusters):
     """
     Looks for the state of the EMR cluster and if present returns it. Otherwise raises NoSuchActivityError exception.
-    
+
     Args:
         cluster_name (str): name of the cluster
-    
+
     Returns:
         str. The state of the cluster in the EMR::
             Possible return values: STARTING, BOOTSTRAPPING, RUNNING, WAITING, TERMINATING, TERMINATED, TERMINATED_WITH_ERRORS
@@ -35,7 +36,7 @@ def get_emr_cluster_state(emr_cluster_name, emr_list_clusters):
 def get_boto3_emr_list_clusters(region):
     """
     Connects to AWS and gets a list of a EMR clusters on the region
-    
+
         Args:
             region (str): AWS region
         Returns:
@@ -47,7 +48,8 @@ def get_boto3_emr_list_clusters(region):
 
 def poll_for_cluster_state(emr_cluster_name, region, terminating_state, retry_interval_seconds, max_retry_count):
 
-    logger.info('Terminating Cluster [%s] state : %s', emr_cluster_name, terminating_state)
+    logger.info(
+        'Terminating Cluster [%s] state : %s', emr_cluster_name, terminating_state)
 
     # combine callback and terminating_status
     def compare_state_from_list_clusters(emr_list_clusters):
@@ -57,5 +59,6 @@ def poll_for_cluster_state(emr_cluster_name, region, terminating_state, retry_in
 
     # Construct the status getter for the cluster
     func_callable = functools.partial(get_boto3_emr_list_clusters, region)
-    result = aws_utils.utils.poller(func_callable, compare_state_from_list_clusters, retry_interval_seconds, max_retry_count)
+    result = aws_utils.utils.poller(
+        func_callable, compare_state_from_list_clusters, retry_interval_seconds, max_retry_count)
     return result
