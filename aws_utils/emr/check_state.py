@@ -20,14 +20,14 @@ def get_emr_cluster_state(emr_cluster_name, emr_list_clusters):
         str. The state of the cluster in the EMR::
             Possible return values: STARTING, BOOTSTRAPPING, RUNNING, WAITING, TERMINATING, TERMINATED, TERMINATED_WITH_ERRORS
     """
-    current_status = ''
+    current_state = ''
     # get the status of the cluster
     for cluster in emr_list_clusters['Clusters']:
         if cluster['Name'] == emr_cluster_name:
-            current_status = cluster['Status']['State']
+            current_state = cluster['Status']['State']
 
-    if current_status is not '':
-        return current_status
+    if current_state is not '':
+        return current_state
     else:
         raise NoSuchActivityError('The cluster status is empty')
 
