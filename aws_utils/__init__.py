@@ -1,0 +1,2 @@
+class NoSuchActivityError(Exception):
+    pass

@@ -12,6 +12,7 @@ INSTALL_REQUIRES = [
 TEST_REQUIRES = [
     'moto>=0.4.19,<0.5.0',
     'pytest>=2.8.5,<2.9.0',
+    'mock==1.3.0'
 ]
 
 setup(
@@ -22,6 +23,6 @@ setup(
     description="collection of AWS useful functions",
     url='https://github.com/skimhub/aws-utils',
     packages=find_packages(exclude=['test']),
-    install_requires=INSTALL_REQUIRES + TEST_REQUIRES, # not entirely corect but gets tests with moto working
+    install_requires=INSTALL_REQUIRES + TEST_REQUIRES,  # not entirely corect but gets tests with moto working
     # test_require=TEST_REQUIRES,
 )
