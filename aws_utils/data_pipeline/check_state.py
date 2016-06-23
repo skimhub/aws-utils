@@ -51,4 +51,4 @@ def poll_for_state(emr_name, region, terminating_state,
 
     # Construct the status getter for the cluster
     status_getter = functools.partial(get_pipeline_state, emr_name, region)
-    return poller(status_getter, callback_end_polling=check_state, interval)
+    return poller(status_getter, check_state, interval)
