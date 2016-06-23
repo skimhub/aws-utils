@@ -37,10 +37,8 @@ def get_pipeline_state(pipeline_name, region, pipelines=None):
     current_status_pipeline = ''
     # get the status of the pipeline
     for pipeline in pipelines['pipelineIdList']:
-        #print pipeline
         if pipeline['name'] == pipeline_name:
             pipeline_settings = boto3client_pipelines.describe_pipelines(pipelineIds=[pipeline['id']])
-            print pipeline_settings
             pipeline_fields = pipeline_settings['pipelineDescriptionList'][0]['fields']
             current_status_pipeline = ''.join([item['stringValue'] for item in pipeline_fields if item['key'] ==
                                '@pipelineState'])

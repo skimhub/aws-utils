@@ -25,10 +25,7 @@ def test_get_emr_state():
 @patch('aws_utils.emr.status.emr.get_emr_state')
 @patch('aws_utils.emr.status.poller')
 def test_poll_for_status(mocked_get_emr_state, mocked_poller):
-    from aws_utils.emr.status.emr import get_emr_state
     mocked_get_emr_state.return_value = 'MATCH'
-
-    from aws_utils.emr.status import simple_poller
     mocked_poller.return_value = 'MATCH'
 
     emr.poll_for_status('Cluster-Match', REGION, 'MATCH', 10) == mocked_get_emr_state.return_value[0]
@@ -39,10 +36,7 @@ def test_poll_for_status(mocked_get_emr_state, mocked_poller):
 @patch('aws_utils.emr.status.emr.get_emr_state')
 @patch('aws_utils.emr.status.poller')
 def test_poll_for_status_retry(mocked_get_emr_state, mocked_status):
-    from aws_utils.emr.status.emr import get_emr_state
     mocked_get_emr_state.return_value = 'MATCH'
-
-    from aws_utils.emr.status import simple_poller
     mocked_status.return_value = 'NOMATCH'#True
 
     # assert emr.poll_for_status('Cluster-Match', REGION, 'MATCH', 10) is retried
