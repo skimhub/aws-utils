@@ -2,7 +2,7 @@ import functools
 import logging
 
 from aws_utils import NoSuchActivityError
-from aws_utils.utils import poller
+import aws_utils
 import boto3
 
 
@@ -60,5 +60,6 @@ def poll_for_cluster_state(emr_cluster_name, region, terminating_state, retry_in
 
     # Construct the status getter for the cluster
     func_callable = functools.partial(get_boto3_emr_list_clusters, region)
-    result = poller(func_callable, compare_state_from_list_clusters, retry_interval_seconds, max_retry_count)
+    result = aws_utils.utils.poller(
+        func_callable, compare_state_from_list_clusters, retry_interval_seconds, max_retry_count)
     return result
