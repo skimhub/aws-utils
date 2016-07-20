@@ -8,7 +8,7 @@ from dateutil.tz import tzlocal
 
 logging.basicConfig()
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.DEBUG)
+LOGGER.setLevel(logging.INFO)
 
 States = namedtuple('States', ['running', 'success', 'failure'])
 
@@ -23,18 +23,18 @@ class EMRPollingException(Exception):
 
 def on_cluster_status_change(logger, status, prev_state):
     """Handle EMR cluster status change."""
-    logger.debug('Cluster status changed: %s -> %s', prev_state, status)
+    logger.info('Cluster status changed: %s -> %s', prev_state, status)
 
 
 def on_cluster_success_status(logger, status, reason):
     """Handle EMR cluster success status."""
-    logger.debug('Cluster success: %s %s', status, reason)
+    logger.info('Cluster success: %s %s', status, reason)
 
 
 def on_cluster_failure_status(logger, status, reason):
     """Handle EMR cluster failure status."""
     msg = 'Cluster failure: {} {}'.format(status, reason)
-    logger.debug(msg)
+    logger.exception(msg)
     raise EMRPollingException(msg)
 
 
