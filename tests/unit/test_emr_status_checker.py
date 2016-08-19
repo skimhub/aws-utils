@@ -4,8 +4,8 @@ from dateutil.tz import tzlocal
 from mock import MagicMock
 from pytest import raises
 
-from aws_utils.emr.polling_v2 import (has_cluster_successfully_finished,
-                                      EMRPollingException)
+from aws_utils.emr.emr_status_checker import (has_cluster_successfully_finished,
+                                              EMRPollingException)
 
 TEST_CLUSTER_ID = 'A Cluster ID'
 
