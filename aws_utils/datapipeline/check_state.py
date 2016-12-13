@@ -5,11 +5,11 @@ from aws_utils import NoSuchActivityError
 from aws_utils.utils import poller
 import boto3
 
-
 logging.basicConfig(format='%(levelname)s:\t%(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 EXIT_STATUS = 'ERROR'
+
 
 class HealthStatusError(Exception):
     pass
@@ -55,7 +55,6 @@ def get_pipeline_state(pipeline_settings):
 
 
 def poll_pipeline_for_state(pipeline_name, region, terminating_state, interval, max_retry):
-
     logger.info('Terminating state: %s', terminating_state)
 
     def compare_state_from_list_pipelines(pipeline_settings):
