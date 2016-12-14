@@ -7,7 +7,7 @@ INSTALL_REQUIRES = [
     'boto>=2.38.0,<3.0.0',
     'boto3>=1.2.3,<1.3.0',
     'smart-open>=1.3.1,<1.4.0',
-    'dateutil',
+    'dateutil>=0.6.6',
 ]
 
 TEST_REQUIRES = [
