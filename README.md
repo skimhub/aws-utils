@@ -25,27 +25,3 @@ and run it:
    py35: commands succeeded
    congratulations :)
 ```
-
-## Deploying
-
-**devpi**  
-*Dev libraries : http://pypi.skimlinks.net/skim/dev*  
-*Prod libraries : http://pypi.skimlinks.net/skim/live*  
-
-```
-1) Within the project's root :
-pip install devpi
-devpi login skim --password <devPI_pass>
-
-2) Edit setup.py :
-version=<some_package_number>
-
-3) Upload to http://pypi.skimlinks.net/skim/live :
-devpi upload
-
-4.1) Install with :
-pip install -r services/requirements.txt --index-url=http://pypi.skimlinks.net/skim/live --trusted-host pypi.skimlinks.net
-<OR>
-4.2) Add to requirements :
-or add to requirements as : audience-recommendation==<some_package_number>
-```
