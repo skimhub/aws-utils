@@ -1,11 +1,11 @@
 import gzip
 import logging
+from configparser import DuplicateSectionError
 from io import StringIO
 
 import boto
 import boto3
 import smart_open
-import ConfigParser
 import cPickle as pickle
 
 from boto.s3.bucket import Bucket
@@ -110,7 +110,7 @@ def file_is_empty(bucket, path):
 def setup_boto():
     try:
         boto.config.add_section("Boto")
-    except ConfigParser.DuplicateSectionError:
+    except DuplicateSectionError:
         pass
     boto.config.set("Boto", "metadata_service_num_attempts", "20")
 
