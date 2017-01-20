@@ -63,9 +63,9 @@ def save_to_s3(bucket, path, data, compress=False):
         gzip_obj = gzip.GzipFile(filename='gzipped_file', mode='wb', fileobj=mock_file)
         gzip_obj.write(data)
         gzip_obj.close()
-        key.set_contents_from_string(mock_file.getvalue())
-    else:
-        key.set_contents_from_string(data)
+        data = mock_file.getvalue()
+
+    key.set_contents_from_string(data)
 
 
 def get_from_s3(bucket, path):
