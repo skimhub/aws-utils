@@ -1,3 +1,4 @@
+import gzip
 import logging
 from StringIO import StringIO
 
@@ -40,14 +41,30 @@ def get_filesize(bucket, path):
     return bucket.lookup(path).size
 
 
-def save_to_s3(bucket, path, data):
+def save_to_s3(bucket, path, data, compress=False):
+    """Takes a data string and saves it to provided path in the provided bucket
+
+    Args:
+        compress (bool): If True the data is gzip compressed before saving to s3.
+        data (str): String of data we wish to pass
+        path (str): Path within the bucket to save the file to, should not contain the bucket name
+        bucket (str or Bucket): Bucket to add the file to, if a string is provided, we try and open an amazon bucket with that name.
     """
-    Takes a data string and saves it to provided path in the provided bucket
-    """
+    if isinstance(bucket, str):
+        bucket = boto.connect_s3(host='s3.amazonaws.com').get_bucket(bucket)
+
     key = Key(bucket)
     key.key = path
     logger.debug("Uploading to %s", key.key)
-    key.set_contents_from_string(data)
+
+    if compress:
+        mock_file = StringIO()
+        gzip_obj = gzip.GzipFile(filename='gzipped_file', mode='wb', fileobj=mock_file)
+        gzip_obj.write(data)
+        gzip_obj.close()
+        key.set_contents_from_string(mock_file.getvalue())
+    else:
+        key.set_contents_from_string(data)
 
 
 def get_from_s3(bucket, path):
