@@ -3,6 +3,7 @@ import logging
 from StringIO import StringIO
 
 import boto
+import boto3
 import smart_open
 import ConfigParser
 import cPickle as pickle
@@ -129,7 +130,7 @@ def _iterate_days(from_date, to_date):
     Inclusive of both bounding days.
 
     For example, this will yield all days in April (1 to 30)
-    >>> _iterate_days(dt(2013, 4, 1), dt(2013, 4, 30))
+    >> _iterate_days(dt(2013, 4, 1), dt(2013, 4, 30))
     """
     if from_date > to_date:
         raise ValueError('from_date %s is > to_date %s', from_date, to_date)
@@ -179,12 +180,14 @@ def merge_part_files(input_bucket, input_prefix,
                      output_bucket, output_key, list_key=None,
                      sort_key=None):
     """
-    :param input_bucket: a boto bucket object
-    :param input_prefix: a string representing the prefix to scan for keys to
+
+    Args:
+        input_bucket: a boto bucket object
+        input_prefix: a string representing the prefix to scan for keys to
                          merge
-    :param output_bucket: a boto bucket object
-    :param output_key: the key to store the merged file
-    :param sort_key: function to sort the keys with
+        output_bucket: a boto bucket object
+        output_key: the key to store the merged file
+        sort_key: function to sort the keys with
                      If for example you want have header as first file sort_fn would be
                      lambda x: 'header' in x.key
     """
@@ -317,3 +320,33 @@ def path_contains_data(bucket, root_path, min_file_size=0, file_extension=None):
             return True
 
     return False
+
+
+def _delete_1000_s3_files(bucket, directory):
+    conn = boto3.resource('s3')
+    objects_to_delete = conn.meta.client.list_objects(Bucket=bucket, Prefix=directory)
+    delete_keys = {'Objects': [{'Key': k} for k in [obj['Key'] for obj in objects_to_delete.get('Contents', [])]]}
+
+    if delete_keys['Objects']:
+        conn.meta.client.delete_objects(Bucket=bucket, Delete=delete_keys)
+        return True
+    return False
+
+
+def delete_contents_of_s3_directory(directory, bucket=None):
+    """Be very careful, this method will delete everything under a given path, use with cation
+
+    Args:
+        directory (str): If bucket is not set then this path must contain the bucket directory, otherwise the bucket can be
+        bucket (str): If set this is the bucket we delete from and the directory is the path within that
+    """
+    if bucket is None:
+        bucket, directory = get_bucket_and_path_from_uri(directory)
+
+    logger.info("deleting contents of s3 bucket %s directory %s", bucket, directory)
+
+    assert len(directory) > 10, "just in case don't want to delete the root of the bucket..."
+
+    # Deleting keys from s3 appears to max out at 1000 entries so we need to do this multiple times until the directory is clear.
+    while _delete_1000_s3_files(bucket, directory):
+        pass
