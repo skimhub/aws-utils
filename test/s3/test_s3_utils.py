@@ -3,6 +3,8 @@ from collections import namedtuple
 
 import boto
 import cPickle as pickle
+
+import boto3
 import moto
 import os
 import pytest
@@ -10,7 +12,7 @@ from pytest import raises
 
 from aws_utils.s3.paths import save_to_s3
 from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, path_contains_data, \
-    setup_bucket
+    setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory
 
 TEST_BUCKET = 'audience-data-store-qa'
 TEST_INP_PREFIX = 'integration-tests/s3_utils_input'
@@ -98,10 +100,11 @@ def test_success_load_pickle_from_s3():
         assert load_pickle_from_s3(bucket, 'index_to_word.pkl') == expected
 
 
-def _create_file(file_path):
+def _create_file(file_path, bucket_name=TEST_BUCKET):
     conn = boto.connect_s3()
-    bucket = conn.get_bucket(TEST_BUCKET)
+    bucket = conn.get_bucket(bucket_name)
     key = bucket.new_key(file_path)
+    key.set_contents_from_string('a')
 
     return bucket, key
 
@@ -182,3 +185,26 @@ def test_path_contains_data_with_extension_filter():
 def test_setup_bucket_with_period_in_name():
     """test for issue AS-426 opening a bucket with a '.' in the path was throwing exception"""
     setup_bucket('data.api.qa.test')
+
+
+@moto.mock_s3
+def test_delete_contents_of_s3_directory_should_fail_on_root():
+    with pytest.raises(Exception):
+        delete_contents_of_s3_directory('', bucket_name='test_bucket')
+
+
+@moto.mock_s3
+def test_delete_contents_of_s3_directory_should_fail_on_root():
+    test_bucket = 'test_bucket'
+    root_path = 'my/test/root/path/is/here'
+
+    boto.connect_s3().create_bucket(test_bucket)
+
+    for i in range(2000):
+        _create_file(root_path + '/' + str(uuid.uuid4()) + '/' + str(uuid.uuid4()), bucket_name=test_bucket)
+
+    assert len(get_contents_of_directory(root_path, bucket=test_bucket)) == 2000
+
+    delete_contents_of_s3_directory(root_path, bucket_name=test_bucket)
+
+    assert len(get_contents_of_directory(root_path, bucket=test_bucket)) == 0

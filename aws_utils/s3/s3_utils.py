@@ -7,6 +7,8 @@ import boto3
 import smart_open
 import ConfigParser
 import cPickle as pickle
+
+from boto.s3.bucket import Bucket
 from dateutil import rrule
 
 from boto.s3.connection import OrdinaryCallingFormat
@@ -97,10 +99,6 @@ def verify_s3_pkl(bucket, path, data):
         raise PklError
 
 
-def path_exists(bucket, path):
-    return bool(bucket.get_key(path, validate=True))
-
-
 def file_is_empty(bucket, path):
     key = bucket.lookup(path)
     if key.size == 0:
@@ -122,6 +120,15 @@ def setup_bucket(bucket_name):
     s3_conn = boto.connect_s3(host='s3.amazonaws.com', calling_format=OrdinaryCallingFormat())
     bucket = s3_conn.get_bucket(bucket_name)
     return bucket
+
+
+def get_bucket(bucket):
+    if isinstance(bucket, Bucket):
+        return bucket
+    if isinstance(bucket, str):
+        return setup_bucket(bucket)
+    else:
+        raise TypeError("Expected bucket to be Bucket or str was %s " % type(bucket))
 
 
 def _iterate_days(from_date, to_date):
@@ -333,20 +340,40 @@ def _delete_1000_s3_files(bucket, directory):
     return False
 
 
-def delete_contents_of_s3_directory(directory, bucket=None):
-    """Be very careful, this method will delete everything under a given path, use with cation
+def delete_contents_of_s3_directory(directory, bucket_name=None):
+    """Be very careful, this method will delete everything under a given path, use with caution
 
     Args:
         directory (str): If bucket is not set then this path must contain the bucket directory, otherwise the bucket can be
-        bucket (str): If set this is the bucket we delete from and the directory is the path within that
+        bucket_name (str): If set this is the bucket we delete from and the directory is the path within that
     """
-    if bucket is None:
-        bucket, directory = get_bucket_and_path_from_uri(directory)
+    if bucket_name is None:
+        bucket_name, directory = get_bucket_and_path_from_uri(directory)
 
-    logger.info("deleting contents of s3 bucket %s directory %s", bucket, directory)
+    if isinstance(bucket_name, Bucket):
+        bucket_name = bucket_name.name
+
+    logger.info("deleting contents of s3 bucket %s directory %s", bucket_name, directory)
 
     assert len(directory) > 10, "just in case don't want to delete the root of the bucket..."
 
     # Deleting keys from s3 appears to max out at 1000 entries so we need to do this multiple times until the directory is clear.
-    while _delete_1000_s3_files(bucket, directory):
+    while _delete_1000_s3_files(bucket_name, directory):
         pass
+
+
+def get_contents_of_directory(directory, bucket=None):
+    """List all the files in a given s3 directory
+
+    Args:
+        directory (str): If bucket is not set then this path must contain the bucket directory, otherwise the bucket can be
+        bucket (str or Bucket): If set this is the bucket we delete from and the directory is the path within that
+
+    Returns:
+        list of str - the names of all the files
+    """
+    if bucket is None:
+        bucket, directory = get_bucket_and_path_from_uri(directory)
+    bucket = get_bucket(bucket)
+
+    return [x.key for x in bucket.list(prefix=directory)]
