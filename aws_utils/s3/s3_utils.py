@@ -5,9 +5,9 @@ import boto3
 import smart_open
 
 try:
-    from configparser import DuplicateSectionError
-except ImportError:
     from ConfigParser import DuplicateSectionError
+except ImportError:
+    from configparser import DuplicateSectionError
 try:
     import cPickle as pickle
 except ImportError:  # for python 3
@@ -284,7 +284,7 @@ def get_bucket_and_path_from_uri(path):
     :return: A tuple containing the S3 bucket and path -> (bucket, path-to/something)
     """
     parsed_url = urlparse(path)
-    return (parsed_url.netloc, parsed_url.path.lstrip('/'))
+    return parsed_url.netloc, parsed_url.path.lstrip('/')
 
 
 def path_exists(bucket, path):

@@ -2,9 +2,12 @@ import uuid
 from collections import namedtuple
 
 import boto
-import cPickle as pickle
 
-import boto3
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
 import moto
 import os
 import pytest
@@ -58,8 +61,8 @@ def test_merge_files_ordering(bucket):
                        FILES_CONTENT['part2.gz'] + FILES_CONTENT['part3.gz'])
 
     merge_part_files(bucket, TEST_INP_PREFIX,
-                              bucket, OUTPUT,
-                              sort_key=lambda obj: 'header.gz' in obj.key)
+                     bucket, OUTPUT,
+                     sort_key=lambda obj: 'header.gz' in obj.key)
 
     merged = get_from_s3(bucket, OUTPUT)
     assert len(merged) == len(desired_content), "Content length not matching"
