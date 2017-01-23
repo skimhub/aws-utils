@@ -1,13 +1,14 @@
 from setuptools import setup, find_packages
 
 package = 'aws-utils'
-version = '0.2.2'
+version = '0.2.3'
 
 INSTALL_REQUIRES = [
     'boto>=2.38.0,<3.0.0',
     'boto3>=1.2.3,<1.3.0',
     'smart-open>=1.3.1,<1.4.0',
     'dateutils>=0.6.6',
+    'retrying>=1.3.3'
 ]
 
 TEST_REQUIRES = [

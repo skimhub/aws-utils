@@ -1,10 +1,20 @@
+import gzip
 import logging
-from StringIO import StringIO
-
 import boto
+import boto3
 import smart_open
-import ConfigParser
-import cPickle as pickle
+
+try:
+    from ConfigParser import DuplicateSectionError
+except ImportError:
+    from configparser import DuplicateSectionError
+try:
+    import cPickle as pickle
+except ImportError:  # for python 3
+    import pickle
+
+from io import StringIO
+from boto.s3.bucket import Bucket
 from dateutil import rrule
 
 from boto.s3.connection import OrdinaryCallingFormat
@@ -40,13 +50,29 @@ def get_filesize(bucket, path):
     return bucket.lookup(path).size
 
 
-def save_to_s3(bucket, path, data):
+def save_to_s3(bucket, path, data, compress=False):
+    """Takes a data string and saves it to provided path in the provided bucket
+
+    Args:
+        compress (bool): If True the data is gzip compressed before saving to s3.
+        data (str): String of data we wish to pass
+        path (str): Path within the bucket to save the file to, should not contain the bucket name
+        bucket (str or Bucket): Bucket to add the file to, if a string is provided, we try and open an amazon bucket with that name.
     """
-    Takes a data string and saves it to provided path in the provided bucket
-    """
+    if isinstance(bucket, str):
+        bucket = boto.connect_s3(host='s3.amazonaws.com').get_bucket(bucket)
+
     key = Key(bucket)
     key.key = path
     logger.debug("Uploading to %s", key.key)
+
+    if compress:
+        mock_file = StringIO()
+        gzip_obj = gzip.GzipFile(filename='gzipped_file', mode='wb', fileobj=mock_file)
+        gzip_obj.write(data)
+        gzip_obj.close()
+        data = mock_file.getvalue()
+
     key.set_contents_from_string(data)
 
 
@@ -79,10 +105,6 @@ def verify_s3_pkl(bucket, path, data):
         raise PklError
 
 
-def path_exists(bucket, path):
-    return bool(bucket.get_key(path, validate=True))
-
-
 def file_is_empty(bucket, path):
     key = bucket.lookup(path)
     if key.size == 0:
@@ -94,7 +116,7 @@ def file_is_empty(bucket, path):
 def setup_boto():
     try:
         boto.config.add_section("Boto")
-    except ConfigParser.DuplicateSectionError:
+    except DuplicateSectionError:
         pass
     boto.config.set("Boto", "metadata_service_num_attempts", "20")
 
@@ -106,13 +128,22 @@ def setup_bucket(bucket_name):
     return bucket
 
 
+def get_bucket(bucket):
+    if isinstance(bucket, Bucket):
+        return bucket
+    if isinstance(bucket, str):
+        return setup_bucket(bucket)
+    else:
+        raise TypeError("Expected bucket to be Bucket or str was %s " % type(bucket))
+
+
 def _iterate_days(from_date, to_date):
     """Yield datetime instances for the start of each day between from and to.
 
     Inclusive of both bounding days.
 
     For example, this will yield all days in April (1 to 30)
-    >>> _iterate_days(dt(2013, 4, 1), dt(2013, 4, 30))
+    >> _iterate_days(dt(2013, 4, 1), dt(2013, 4, 30))
     """
     if from_date > to_date:
         raise ValueError('from_date %s is > to_date %s', from_date, to_date)
@@ -162,12 +193,14 @@ def merge_part_files(input_bucket, input_prefix,
                      output_bucket, output_key, list_key=None,
                      sort_key=None):
     """
-    :param input_bucket: a boto bucket object
-    :param input_prefix: a string representing the prefix to scan for keys to
+
+    Args:
+        input_bucket: a boto bucket object
+        input_prefix: a string representing the prefix to scan for keys to
                          merge
-    :param output_bucket: a boto bucket object
-    :param output_key: the key to store the merged file
-    :param sort_key: function to sort the keys with
+        output_bucket: a boto bucket object
+        output_key: the key to store the merged file
+        sort_key: function to sort the keys with
                      If for example you want have header as first file sort_fn would be
                      lambda x: 'header' in x.key
     """
@@ -251,7 +284,7 @@ def get_bucket_and_path_from_uri(path):
     :return: A tuple containing the S3 bucket and path -> (bucket, path-to/something)
     """
     parsed_url = urlparse(path)
-    return (parsed_url.netloc, parsed_url.path.lstrip('/'))
+    return parsed_url.netloc, parsed_url.path.lstrip('/')
 
 
 def path_exists(bucket, path):
@@ -300,3 +333,53 @@ def path_contains_data(bucket, root_path, min_file_size=0, file_extension=None):
             return True
 
     return False
+
+
+def _delete_1000_s3_files(bucket, directory):
+    conn = boto3.resource('s3')
+    objects_to_delete = conn.meta.client.list_objects(Bucket=bucket, Prefix=directory)
+    delete_keys = {'Objects': [{'Key': k} for k in [obj['Key'] for obj in objects_to_delete.get('Contents', [])]]}
+
+    if delete_keys['Objects']:
+        conn.meta.client.delete_objects(Bucket=bucket, Delete=delete_keys)
+        return True
+    return False
+
+
+def delete_contents_of_s3_directory(directory, bucket_name=None):
+    """Be very careful, this method will delete everything under a given path, use with caution
+
+    Args:
+        directory (str): If bucket is not set then this path must contain the bucket directory, otherwise the bucket can be
+        bucket_name (str): If set this is the bucket we delete from and the directory is the path within that
+    """
+    if bucket_name is None:
+        bucket_name, directory = get_bucket_and_path_from_uri(directory)
+
+    if isinstance(bucket_name, Bucket):
+        bucket_name = bucket_name.name
+
+    logger.info("deleting contents of s3 bucket %s directory %s", bucket_name, directory)
+
+    assert len(directory) > 10, "just in case don't want to delete the root of the bucket..."
+
+    # Deleting keys from s3 appears to max out at 1000 entries so we need to do this multiple times until the directory is clear.
+    while _delete_1000_s3_files(bucket_name, directory):
+        pass
+
+
+def get_contents_of_directory(directory, bucket=None):
+    """List all the files in a given s3 directory
+
+    Args:
+        directory (str): If bucket is not set then this path must contain the bucket directory, otherwise the bucket can be
+        bucket (str or Bucket): If set this is the bucket we delete from and the directory is the path within that
+
+    Returns:
+        list of str - the names of all the files
+    """
+    if bucket is None:
+        bucket, directory = get_bucket_and_path_from_uri(directory)
+    bucket = get_bucket(bucket)
+
+    return [x.key for x in bucket.list(prefix=directory)]
