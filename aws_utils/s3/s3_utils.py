@@ -1,13 +1,19 @@
 import gzip
 import logging
-from configparser import DuplicateSectionError
-from io import StringIO
-
 import boto
 import boto3
 import smart_open
-import cPickle as pickle
 
+try:
+    from configparser import DuplicateSectionError
+except ImportError:
+    from ConfigParser import DuplicateSectionError
+try:
+    import cPickle as pickle
+except ImportError:  # for python 3
+    import pickle
+
+from io import StringIO
 from boto.s3.bucket import Bucket
 from dateutil import rrule
 
