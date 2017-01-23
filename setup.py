@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 package = 'aws-utils'
-version = '0.2.3'
+version = '0.2.4'
 
 INSTALL_REQUIRES = [
     'boto>=2.38.0,<3.0.0',

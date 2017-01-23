@@ -59,8 +59,7 @@ def save_to_s3(bucket, path, data, compress=False):
         path (str): Path within the bucket to save the file to, should not contain the bucket name
         bucket (str or Bucket): Bucket to add the file to, if a string is provided, we try and open an amazon bucket with that name.
     """
-    if isinstance(bucket, str):
-        bucket = boto.connect_s3(host='s3.amazonaws.com').get_bucket(bucket)
+    bucket = get_bucket(bucket)
 
     key = Key(bucket)
     key.key = path
@@ -106,6 +105,16 @@ def verify_s3_pkl(bucket, path, data):
 
 
 def file_is_empty(bucket, path):
+    """
+
+    Args:
+        bucket:
+        path:
+
+    Returns:
+
+    """
+    bucket = get_bucket(bucket)
     key = bucket.lookup(path)
     if key.size == 0:
         return True
@@ -122,6 +131,14 @@ def setup_boto():
 
 
 def setup_bucket(bucket_name):
+    """Setup bucket
+
+    Args:
+        bucket_name (str): name of the bucket we want to load
+
+    Returns:
+        Bucket
+    """
     setup_boto()
     s3_conn = boto.connect_s3(host='s3.amazonaws.com', calling_format=OrdinaryCallingFormat())
     bucket = s3_conn.get_bucket(bucket_name)
@@ -129,6 +146,14 @@ def setup_bucket(bucket_name):
 
 
 def get_bucket(bucket):
+    """If given a str returns the Bucket object for it. If given a bucket just returns it
+
+    Args:
+        bucket (str or Bucket):
+
+    Returns:
+        Bucket
+    """
     if isinstance(bucket, Bucket):
         return bucket
     if isinstance(bucket, str):
@@ -291,8 +316,10 @@ def path_exists(bucket, path):
     """Check if a given path exists
 
     Args:
-
+        path (str): Path within the bucket to save the file to, should not contain the bucket name
+        bucket (str or Bucket): Bucket to add the file to, if a string is provided, we try and open an amazon bucket with that name.
     """
+    bucket = get_bucket(bucket)
     return bool(bucket.get_key(path, validate=True))
 
 
