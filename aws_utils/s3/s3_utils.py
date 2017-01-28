@@ -1,8 +1,9 @@
 import gzip
 import logging
 import boto
-import boto3
+import boto3 as boto3
 import smart_open
+from botocore.exceptions import ClientError
 
 try:
     from ConfigParser import DuplicateSectionError
@@ -410,3 +411,53 @@ def get_contents_of_directory(directory, bucket=None):
     bucket = get_bucket(bucket)
 
     return [x.key for x in bucket.list(prefix=directory)]
+
+
+def rename_s3_key(boto3_client, bucket_name, old_prefix, new_prefix):
+    """
+    Rename a single file on S3 (=> copy + delete)
+    Args:
+        boto3_client (botocore.client.S3) : boto3 client
+        bucket_name (str):
+        old_prefix (str):
+        new_prefix (str):
+    """
+    if old_prefix != new_prefix:
+        if not bucket_name:
+            logger.error('The bucket must be a valid bucket name')
+            raise (ClientError, AttributeError)
+        boto3_client.copy_object(CopySource={'Bucket': bucket_name, 'Key': old_prefix}, Bucket=bucket_name, Key=new_prefix)
+        logger.info('Moved file from {} to {}'.format(old_prefix, new_prefix))
+        boto3_client.delete_object(Bucket=bucket_name, Key=old_prefix)
+        logger.info('Delete the old prefix')
+    else:
+        logger.warn('Source and destination paths are the same')
+
+
+def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modification_func=None,
+                      filter_keys_func=None):
+    """
+    Renames all keys in a prefix_root/folder/ which are not filtered by a filter function
+    Args:
+        bucket_name (str): An existing s3 bucket
+        bucket_region (str): A valid s3 region e.g 'us-east-1'
+        prefix_root (str): The prefix to start the recursive renaming with
+        prefix_modification_func (function): A function that changes the prefix string. In case it is None, nothing will be moved
+        filter_keys_func (function): A function that will apply a filter to the keys we don't want to move. In case it is None, nothing will be moved
+    """
+    boto3_client = boto3.client('s3', bucket_region)
+    s3_conn = boto3.client('s3', bucket_region)
+
+    paginator = s3_conn.get_paginator('list_objects')
+    pageresponse = paginator.paginate(Bucket=bucket_name, Prefix=prefix_root)
+    for page_of_keys in pageresponse:
+        for current_key in page_of_keys['Contents']:
+            current_prefix = current_key['Key']
+            if filter_keys_func(current_prefix) or prefix_modification_func == None:
+                logger.info('Skipped prefix {}'.format(current_prefix))
+                continue
+            try:
+                new_prefix_name = prefix_modification_func(current_prefix)
+                rename_s3_key(boto3_client, bucket_name, current_prefix, new_prefix_name)
+            except (ClientError, AttributeError) as e:
+                logger.error('Unable to rename key prefix {}, {}'.format(current_prefix, e[0]))
