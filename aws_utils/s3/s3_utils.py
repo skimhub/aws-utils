@@ -424,7 +424,7 @@ def rename_s3_key(boto3_client, bucket_name, old_prefix, new_prefix):
     """
     if old_prefix != new_prefix:
         if not bucket_name:
-            raise (ClientError, AttributeError)
+            raise ValueError('The bucket cannot be an empty value')
         boto3_client.copy_object(CopySource={'Bucket': bucket_name, 'Key': old_prefix}, Bucket=bucket_name, Key=new_prefix)
         boto3_client.delete_object(Bucket=bucket_name, Key=old_prefix)
         logger.info('Moved key {}'.format(old_prefix))
@@ -442,6 +442,11 @@ def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modificati
         prefix_root (str): The prefix to start the recursive renaming with
         prefix_modification_func (function): A function that changes the prefix string. In case it is None, nothing will be moved
         filter_keys_func (function): A function that will apply a filter to the keys we don't want to move. In case it is None, nothing will be moved
+    Example:
+        The function will expect having all the arguments without a default value :
+        def foo(s) -> str: return s.replace('a', 'b')
+        def bar(s) -> bool: return '.gz' in s
+        rename_keys_on_s3('audience', 'us-east-1', 'production/dsp/partner_name/', prefix_modification_func=foo, filter_keys_func=bar)
     """
     if prefix_modification_func is None:
         raise Exception('There should be a modification function specified')
