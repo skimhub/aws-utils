@@ -1,9 +1,8 @@
 import uuid
+import pickle
 from collections import namedtuple
 
 import boto, boto3, moto
-import mock, botocore
-from mock import Mock
 
 try:
     import cPickle as pickle
@@ -95,21 +94,15 @@ def test_partitioned_list(input, expected):
 def test_success_load_pickle_from_s3():
     conn = boto.connect_s3()
     conn.create_bucket(TEST_BUCKET)
-
-    if os.path.exists('/app/data'):
-        prefix = 'file:///app/'
-    else:
-        prefix = ''
-
     bucket = conn.get_bucket(TEST_BUCKET)
-    local_pkl_path = prefix + 'test/data/pickles/brands_classifier_merc/index_to_word.pkl'
-    k = boto.s3.key.Key(bucket)
-    k.key = 'index_to_word.pkl'
-    k.set_contents_from_filename(local_pkl_path)
 
-    with open(local_pkl_path, 'r') as pkl:
-        expected = pickle.loads(pkl.read())
-        assert load_pickle_from_s3(bucket, 'index_to_word.pkl') == expected
+    string_to_assert = 'test pickle content'
+    mocked_pkl = pickle.dumps(string_to_assert)
+
+    k = bucket.new_key('index_to_word.pkl')
+    k.set_contents_from_string(mocked_pkl)
+
+    assert load_pickle_from_s3(bucket, 'index_to_word.pkl') == string_to_assert
 
 
 def _create_file(file_path, bucket_name=TEST_BUCKET):
