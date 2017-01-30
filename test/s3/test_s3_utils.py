@@ -223,7 +223,7 @@ def test_delete_contents_of_s3_directory_should_fail_on_root():
 
 
 @moto.mock_s3()
-def test_run_boto3(boto3_client):
+def test_boto3_rename_keys_on_s3(boto3_client):
     mock_bucket = TEST_BUCKET + 'test'
 
     # given the filter
@@ -243,11 +243,24 @@ def test_run_boto3(boto3_client):
     rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
                       prefix_modification_func=mock_modifier,
                       filter_keys_func=mock_filter)
-
-    # then
     excpected_keys = (TEST_S3_KEYS | {TEST_INP_PREFIX + '/app_nexus/2016-01-10T1222/guid_map/compressed_file.gz'}) \
                      - {TEST_INP_PREFIX + '/app_nexus/2016-01-10T12:22/guid_map/compressed_file.gz'}
     new_keys_on_s3 = {key['Key'] for key in
                       boto3_client('s3', TEST_REGION).list_objects_v2(Bucket=mock_bucket,
-                                          Prefix=TEST_INP_PREFIX)['Contents']}
+                                                                      Prefix=TEST_INP_PREFIX)['Contents']}
     assert new_keys_on_s3 == excpected_keys
+
+    # when no filter
+    rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
+                      prefix_modification_func=mock_modifier,
+                      filter_keys_func=None)
+    new_keys_on_s3 = {key['Key'] for key in
+                      boto3_client('s3', TEST_REGION).list_objects_v2(Bucket=mock_bucket,
+                                                                      Prefix=TEST_INP_PREFIX)['Contents']}
+    assert len(new_keys_on_s3) == len(TEST_S3_KEYS)
+
+    # when no modifier:
+    with pytest.raises(Exception):
+        assert rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
+                                 prefix_modification_func=None,
+                                 filter_keys_func=mock_filter)

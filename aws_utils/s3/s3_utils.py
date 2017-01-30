@@ -424,17 +424,15 @@ def rename_s3_key(boto3_client, bucket_name, old_prefix, new_prefix):
     """
     if old_prefix != new_prefix:
         if not bucket_name:
-            logger.error('The bucket must be a valid bucket name')
             raise (ClientError, AttributeError)
         boto3_client.copy_object(CopySource={'Bucket': bucket_name, 'Key': old_prefix}, Bucket=bucket_name, Key=new_prefix)
-        logger.info('Moved file from {} to {}'.format(old_prefix, new_prefix))
         boto3_client.delete_object(Bucket=bucket_name, Key=old_prefix)
-        logger.info('Delete the old prefix')
+        logger.info('Moved key {}'.format(old_prefix))
     else:
         logger.warn('Source and destination paths are the same')
 
 
-def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modification_func=None,
+def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modification_func,
                       filter_keys_func=None):
     """
     Renames all keys in a prefix_root/folder/ which are not filtered by a filter function
@@ -445,15 +443,17 @@ def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modificati
         prefix_modification_func (function): A function that changes the prefix string. In case it is None, nothing will be moved
         filter_keys_func (function): A function that will apply a filter to the keys we don't want to move. In case it is None, nothing will be moved
     """
-    boto3_client = boto3.client('s3', bucket_region)
-    s3_conn = boto3.client('s3', bucket_region)
+    if prefix_modification_func is None:
+        raise Exception('There should be a modification function specified')
 
-    paginator = s3_conn.get_paginator('list_objects')
+    boto3_client = boto3.client('s3', bucket_region)
+
+    paginator = boto3_client.get_paginator('list_objects')
     pageresponse = paginator.paginate(Bucket=bucket_name, Prefix=prefix_root)
     for page_of_keys in pageresponse:
         for current_key in page_of_keys['Contents']:
             current_prefix = current_key['Key']
-            if filter_keys_func(current_prefix) or prefix_modification_func == None:
+            if filter_keys_func is None or filter_keys_func(current_prefix):
                 logger.info('Skipped prefix {}'.format(current_prefix))
                 continue
             try:
