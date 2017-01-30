@@ -14,7 +14,11 @@ try:
 except ImportError:  # for python 3
     import pickle
 
-from io import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
+
 from boto.s3.bucket import Bucket
 from dateutil import rrule
 
@@ -22,6 +26,7 @@ from boto.s3.connection import OrdinaryCallingFormat
 from boto.s3.key import Key
 from retrying import retry
 from urlparse import urlparse
+
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +243,6 @@ def merge_part_files(input_bucket, input_prefix,
         key_list = sorted(key_list, key=sort_key, reverse=True)
 
     out_path = 's3://{}/{}'.format(output_bucket.name, output_key)
-    chunk = StringIO()
 
     def _inc(out, size):
         out.total_size += size
