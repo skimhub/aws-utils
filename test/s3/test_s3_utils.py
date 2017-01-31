@@ -58,7 +58,7 @@ def bucket(request):
     return bucket
 
 
-@pytest.mark.skipif('.tox' in os.environ['PATH'], reason='tox run and smart-open incompatibility')
+@pytest.mark.skip()
 @pytest.mark.slow
 def test_merge_files_ordering(bucket):
     desired_content = (FILES_CONTENT['header.gz'] + FILES_CONTENT['part1.gz'] + \
