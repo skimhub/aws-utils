@@ -4,32 +4,33 @@ import boto
 import boto3 as boto3
 import smart_open
 from botocore.exceptions import ClientError
+from boto.s3.connection import OrdinaryCallingFormat
+from boto.s3.key import Key
+from retrying import retry
+from boto.s3.bucket import Bucket
+from dateutil import rrule
 
+
+# python version backwards compatibility
 try:
     from ConfigParser import DuplicateSectionError
 except ImportError:
     from configparser import DuplicateSectionError
 try:
     import cPickle as pickle
-except ImportError:  # for python 3
+except ImportError:
     import pickle
-
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
-
-from boto.s3.bucket import Bucket
-from dateutil import rrule
-
-from boto.s3.connection import OrdinaryCallingFormat
-from boto.s3.key import Key
-from retrying import retry
-from urlparse import urlparse
+try:
+    from urlparse import urlparse
+except ImportError:
+    from urllib import parse as urlparse
 
 
 logger = logging.getLogger(__name__)
-
 CHUNK_SIZE = 5 * (1024 ** 2)
 STD_DATE_PREFIX = 'year={:04}/month={:02}/day={:02}/'
 
@@ -243,6 +244,7 @@ def merge_part_files(input_bucket, input_prefix,
         key_list = sorted(key_list, key=sort_key, reverse=True)
 
     out_path = 's3://{}/{}'.format(output_bucket.name, output_key)
+    chunk = StringIO()
 
     def _inc(out, size):
         out.total_size += size
