@@ -1,25 +1,27 @@
-import uuid
+import uuid, os
 from collections import namedtuple
-
-import boto
+import boto, boto3, moto
+import pytest
+from pytest import raises
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-import moto
-import os
-import pytest
-from pytest import raises
-
-from aws_utils.s3.paths import save_to_s3
-from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, path_contains_data, \
-    setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory
+from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, \
+    path_contains_data, save_to_s3, \
+    setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory, rename_keys_on_s3, rename_s3_key
 
 TEST_BUCKET = 'audience-data-store-qa'
 TEST_INP_PREFIX = 'integration-tests/s3_utils_input'
 TEST_OUT_PREFIX = 'integration-tests/s3_utils_output'
+TEST_REGION = 'us-east-1'
+TEST_S3_KEYS = {TEST_INP_PREFIX + '/app_nexus/',
+                TEST_INP_PREFIX + '/app_nexus/guid_map',
+                TEST_INP_PREFIX + '/app_nexus/guid_map/compressed_file.gz',
+                TEST_INP_PREFIX + '/app_nexus/2016-01-10T12:22/guid_map/',
+                TEST_INP_PREFIX + '/app_nexus/2016-01-10T12:22/guid_map/compressed_file.gz'}
 
 HEADER_STRING = 'HEADER' * 10
 LONG_STRING = 'Hello' * (2 ** 20) + 'Extra'
@@ -39,6 +41,7 @@ Key = namedtuple('Key', ['name', 'size'])
 @pytest.fixture(scope='function')
 def bucket(request):
     conn = boto.connect_s3(host='s3.amazonaws.com')
+    conn.create_bucket(TEST_BUCKET)
     bucket = conn.get_bucket(TEST_BUCKET)
 
     for fn, content in FILES_CONTENT.items():
@@ -55,6 +58,7 @@ def bucket(request):
     return bucket
 
 
+@pytest.mark.skipif('.tox' in os.environ['PATH'], reason='tox run and smart-open incompatibility')
 @pytest.mark.slow
 def test_merge_files_ordering(bucket):
     desired_content = (FILES_CONTENT['header.gz'] + FILES_CONTENT['part1.gz'] + \
@@ -82,25 +86,18 @@ def test_partitioned_list(input, expected):
 
 
 @moto.mock_s3()
-@pytest.mark.skip(reason="requires local file, in the future bring this file into the project")
 def test_success_load_pickle_from_s3():
     conn = boto.connect_s3()
     conn.create_bucket(TEST_BUCKET)
-
-    if os.path.exists('/app/data'):
-        prefix = 'file:///app/'
-    else:
-        prefix = ''
-
     bucket = conn.get_bucket(TEST_BUCKET)
-    local_pkl_path = prefix + 'test/data/pickles/brands_classifier_merc/index_to_word.pkl'
-    k = boto.s3.key.Key(bucket)
-    k.key = 'index_to_word.pkl'
-    k.set_contents_from_filename(local_pkl_path)
 
-    with open(local_pkl_path, 'r') as pkl:
-        expected = pickle.loads(pkl.read())
-        assert load_pickle_from_s3(bucket, 'index_to_word.pkl') == expected
+    string_to_assert = 'test pickle content'
+    mocked_pkl = pickle.dumps(string_to_assert)
+
+    k = bucket.new_key('index_to_word.pkl')
+    k.set_contents_from_string(mocked_pkl)
+
+    assert load_pickle_from_s3(bucket, 'index_to_word.pkl') == string_to_assert
 
 
 def _create_file(file_path, bucket_name=TEST_BUCKET):
@@ -211,3 +208,47 @@ def test_delete_contents_of_s3_directory_should_fail_on_root():
     delete_contents_of_s3_directory(root_path, bucket_name=test_bucket)
 
     assert len(get_contents_of_directory(root_path, bucket=test_bucket)) == 0
+
+
+@moto.mock_s3()
+def test_boto3_rename_keys_on_s3(boto3_client):
+    mock_bucket = TEST_BUCKET + 'test'
+
+    # given the filter
+    def mock_filter(string): return string.endswith(('guid_map', 'guid_map/'))
+
+    # given the function that modifies the prefix names
+    def mock_modifier(string): return string.replace(':', '')
+
+    # generate mocked keys on s3
+    conn = boto3.resource('s3', region_name=TEST_REGION)
+    conn.create_bucket(Bucket=mock_bucket)
+    for key in TEST_S3_KEYS:
+        conn.Object(mock_bucket, key).put('test string\n ala-bala')
+    assert len([conn.Object(mock_bucket, key) for key in TEST_S3_KEYS]) == len(TEST_S3_KEYS)
+
+    # when
+    rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
+                      prefix_modification_func=mock_modifier,
+                      filter_keys_func=mock_filter)
+    excpected_keys = (TEST_S3_KEYS | {TEST_INP_PREFIX + '/app_nexus/2016-01-10T1222/guid_map/compressed_file.gz'}) \
+                     - {TEST_INP_PREFIX + '/app_nexus/2016-01-10T12:22/guid_map/compressed_file.gz'}
+    new_keys_on_s3 = {key['Key'] for key in
+                      boto3_client('s3', TEST_REGION).list_objects_v2(Bucket=mock_bucket,
+                                                                      Prefix=TEST_INP_PREFIX)['Contents']}
+    assert new_keys_on_s3 == excpected_keys
+
+    # when no filter
+    rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
+                      prefix_modification_func=mock_modifier,
+                      filter_keys_func=None)
+    new_keys_on_s3 = {key['Key'] for key in
+                      boto3_client('s3', TEST_REGION).list_objects_v2(Bucket=mock_bucket,
+                                                                      Prefix=TEST_INP_PREFIX)['Contents']}
+    assert len(new_keys_on_s3) == len(TEST_S3_KEYS)
+
+    # when no modifier:
+    with pytest.raises(Exception):
+        assert rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
+                                 prefix_modification_func=None,
+                                 filter_keys_func=mock_filter)
