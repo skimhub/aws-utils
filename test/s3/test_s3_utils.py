@@ -1,21 +1,16 @@
-import uuid
-import pickle
+import uuid, os
 from collections import namedtuple
-
 import boto, boto3, moto
+import pytest
+from pytest import raises
 
 try:
     import cPickle as pickle
 except ImportError:
     import pickle
 
-import os
-import pytest
-from pytest import raises
-
-from aws_utils.s3.paths import save_to_s3
 from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, \
-    path_contains_data, \
+    path_contains_data, save_to_s3, \
     setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory, rename_keys_on_s3, rename_s3_key
 
 TEST_BUCKET = 'audience-data-store-qa'
@@ -44,9 +39,9 @@ Key = namedtuple('Key', ['name', 'size'])
 
 
 @pytest.fixture(scope='function')
-@moto.mock_s3()
 def bucket(request):
     conn = boto.connect_s3(host='s3.amazonaws.com')
+    conn.create_bucket(TEST_BUCKET)
     bucket = conn.get_bucket(TEST_BUCKET)
 
     for fn, content in FILES_CONTENT.items():
@@ -64,7 +59,9 @@ def bucket(request):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif('.tox' in os.environ['PATH'], reason='tox run and smart-open incompatibility')
 def test_merge_files_ordering(bucket):
+    print (os.environ)
     desired_content = (FILES_CONTENT['header.gz'] + FILES_CONTENT['part1.gz'] + \
                        FILES_CONTENT['part2.gz'] + FILES_CONTENT['part3.gz'])
 
