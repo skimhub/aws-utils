@@ -24,7 +24,5 @@ setup(
     author_email="dev@skimlinks.com",
     description="collection of AWS useful functions",
     url='https://github.com/skimhub/aws-utils',
-    packages=find_packages(exclude=['test']),
-    install_requires=INSTALL_REQUIRES + TEST_REQUIRES, # not entirely corect but gets tests with moto working
-    # test_require=TEST_REQUIRES,
+    packages=find_packages(exclude=['test'])
 )
