@@ -58,10 +58,9 @@ def bucket(request):
     return bucket
 
 
-@pytest.mark.slow
 @pytest.mark.skipif('.tox' in os.environ['PATH'], reason='tox run and smart-open incompatibility')
+@pytest.mark.slow
 def test_merge_files_ordering(bucket):
-    print (os.environ)
     desired_content = (FILES_CONTENT['header.gz'] + FILES_CONTENT['part1.gz'] + \
                        FILES_CONTENT['part2.gz'] + FILES_CONTENT['part3.gz'])
 
@@ -87,7 +86,6 @@ def test_partitioned_list(input, expected):
 
 
 @moto.mock_s3()
-@pytest.mark.skip(reason="requires local file, in the future bring this file into the project")
 def test_success_load_pickle_from_s3():
     conn = boto.connect_s3()
     conn.create_bucket(TEST_BUCKET)
