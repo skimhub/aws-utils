@@ -307,7 +307,10 @@ def load_pickle_from_s3(bucket, path):
     and disappear upon re-run, leading us to believe they are S3 related
     """
     pkl = get_from_s3(bucket, path)
-    return pickle.loads(pkl, encoding='utf-8')
+    try:
+        return pickle.loads(pkl, encoding='utf-8')  # python3
+    except TypeError:
+        return pickle.loads(pkl)  # python2
 
 
 def load_jsonfile_from_s3(bucket, path):
