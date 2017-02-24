@@ -1,4 +1,5 @@
 import gzip
+import json
 import logging
 import boto
 import boto3 as boto3
@@ -306,7 +307,15 @@ def load_pickle_from_s3(bucket, path):
     and disappear upon re-run, leading us to believe they are S3 related
     """
     pkl = get_from_s3(bucket, path)
-    return pickle.loads(pkl)
+    try:
+        return pickle.loads(pkl, encoding='utf-8')  # python3
+    except TypeError:
+        return pickle.loads(pkl)  # python2
+
+
+def load_jsonfile_from_s3(bucket, path):
+    file_contents = get_from_s3(bucket, path).decode('utf-8')
+    return [json.loads(item) for item in file_contents.splitlines()]
 
 
 def get_bucket_and_path_from_uri(path):
