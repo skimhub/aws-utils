@@ -76,6 +76,8 @@ def save_to_s3(bucket, path, data, compress=False):
 
 
 def get_from_s3(bucket, path):
+    bucket = get_bucket(bucket)
+
     k = Key(bucket)
     k.key = path
     return k.get_contents_as_string()
@@ -86,6 +88,8 @@ def delete_path(bucket, path):
     Attempts to delete all keys under a given path
     Will also try to remove spark meta data keys for the path
     """
+    bucket = get_bucket(bucket)
+
     for k in bucket.list(path):
         k.delete()
     k = Key(bucket)
@@ -98,6 +102,8 @@ def verify_s3_pkl(bucket, path, data):
     Grabs a pkl file from S3 and comparse to local pkl.
     Raises a PklError if it fails
     """
+    bucket = get_bucket(bucket)
+
     pkl = get_from_s3(bucket, path)
 
     if pickle.loads(pkl) != data:
@@ -115,6 +121,7 @@ def file_is_empty(bucket, path):
 
     """
     bucket = get_bucket(bucket)
+
     key = bucket.lookup(path)
     if key.size == 0:
         return True
