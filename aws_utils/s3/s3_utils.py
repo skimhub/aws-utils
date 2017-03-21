@@ -58,15 +58,14 @@ def get_date_paths(from_date, to_date, prefix_tmpl=STD_DATE_PREFIX):
 def get_date_range(from_date, to_date):
     """Returns a range of dates
     Args:
-        from_date(str): YYYY-mm-dd
-        to_date(str): YYYY-mm-dd
+        from_date(Date):
+        to_date(Date):
 
     Returns list(Date):
     """
     if from_date > to_date:
         raise ValueError('from_date %s is > to_date %s', from_date, to_date)
-    iterate_days = rrule.rrule(rrule.DAILY, dtstart=from_date, until=to_date)
-    return [date for date in iterate_days(datetime.strptime(from_date, "%Y-%m-%d"), datetime.strptime(to_date, "%Y-%m-%d"))]
+    return rrule.rrule(rrule.DAILY, dtstart=from_date, until=to_date)
 
 
 def get_filesize(bucket, path):
