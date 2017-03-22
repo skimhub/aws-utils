@@ -74,7 +74,7 @@ def fetch_price_stats_per_availability_zone(region, start_time, end_time, instan
 
 
 def get_cheapest_availability_zone(instance_type, search_regions=US_EAST_REGION, expected_job_length=datetime.timedelta(days=1)):
-    """Get the cheapest availability zone from a set of regions. Cheapest is deterened by 'latest price + average price'
+    """Get the cheapest availability zone from a set of regions. Cheapest is determined by 'latest price + average price'
     over the duration that the job is expected to run for
 
     Args:
