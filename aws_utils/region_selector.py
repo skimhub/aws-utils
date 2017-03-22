@@ -45,7 +45,7 @@ def fetch_spot_prices(region, start_time, end_time, instance_type, instance_vers
         token = res['NextToken']
 
 
-def fetch_price_stats_per_avialability_zone(region, start_time, end_time, instance_type, instance_version=INSTANCE_VERSION):
+def fetch_price_stats_per_availability_zone(region, start_time, end_time, instance_type, instance_version=INSTANCE_VERSION):
     """Groups raw prices by region, returns min, max and avg price.
 
     Args:
@@ -91,7 +91,7 @@ def get_cheapest_availability_zone(instance_type, search_regions=US_EAST_REGION,
 
     aggregated_prices = {}
     for region in search_regions:
-        result_stats = fetch_price_stats_per_avialability_zone(region,
+        result_stats = fetch_price_stats_per_availability_zone(region,
                                                                datetime.datetime.utcnow() - expected_job_length,
                                                                datetime.datetime.utcnow(),
                                                                instance_type)
