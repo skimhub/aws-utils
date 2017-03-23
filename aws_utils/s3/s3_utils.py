@@ -55,6 +55,7 @@ def get_date_paths(from_date, to_date, prefix_tmpl=STD_DATE_PREFIX):
 
 
 def get_filesize(bucket, path):
+    bucket = get_bucket(bucket)
     return bucket.lookup(path).size
 
 
@@ -487,3 +488,17 @@ def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modificati
                 rename_s3_key(boto3_client, bucket_name, current_prefix, new_prefix_name)
             except (ClientError, AttributeError) as e:
                 logger.error('Unable to rename key prefix {}, {}'.format(current_prefix, e[0]))
+
+
+def upload_file(bucket, local_file_path, remote_dest_path):
+    """Upload a file to a S3 location.
+
+    Args:
+        bucket (boto s3 bucket obj):
+        local_file_path (str): representation of the location of a file to be uploaded.
+        remote_dest_path (str): representation of the destination path the file should be uploaded to.
+    """
+    bucket = get_bucket(bucket)
+    k = Key(bucket)
+    k.key = remote_dest_path
+    k.set_contents_from_filename(local_file_path)
