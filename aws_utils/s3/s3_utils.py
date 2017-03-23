@@ -516,7 +516,7 @@ def fetch_s3_filepaths_to_local(keys, local_save_directory):
     """
     local_paths = []
     for key in keys:
-        local_path = '{}/{}'.format(local_save_directory, key.name)
+        local_path = '{}{}'.format(local_save_directory, key.name)
 
         with open(local_path, 'wb') as f:
             if key.get_contents_to_file(f):
