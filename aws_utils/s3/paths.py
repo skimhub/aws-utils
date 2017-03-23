@@ -1,15 +1,7 @@
-import gzip
 import logging
 import warnings
-from io import StringIO
-
-import boto
-from boto.exception import S3ResponseError
-
-from boto.s3.key import Key
 
 from aws_utils.s3 import s3_utils
-from aws_utils.s3.s3_utils import get_bucket
 
 logger = logging.getLogger(__name__)
 

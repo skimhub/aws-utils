@@ -4,6 +4,7 @@ import logging
 import boto
 import boto3 as boto3
 import smart_open
+from boto.exception import S3ResponseError, AWSConnectionError
 from botocore.exceptions import ClientError
 from boto.s3.connection import OrdinaryCallingFormat
 from boto.s3.key import Key
@@ -487,3 +488,77 @@ def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modificati
                 rename_s3_key(boto3_client, bucket_name, current_prefix, new_prefix_name)
             except (ClientError, AttributeError) as e:
                 logger.error('Unable to rename key prefix {}, {}'.format(current_prefix, e[0]))
+
+
+def get_s3_keys_by_regex(s3_bucket, s3_directory, pattern):
+    """Fetches the s3 keys of all files within the supplied directory using a regex
+
+    Args:
+        s3_bucket (s3 bucket obj):
+        s3_directory (str):
+        pattern (regex pattern obj)
+    Returns: ([boto s3 key, boto s3 key...]):
+    Raises: ValueError
+    """
+    bucket_contents = s3_bucket.list(s3_directory)
+    s3_filepaths = [key for key in bucket_contents if pattern.search(key.name)]
+    if not s3_filepaths:
+        raise ValueError('No valid segment files found in {}'.format(s3_directory))
+
+
+def fetch_s3_filepaths_to_local(keys, local_save_directory):
+    """Saves a list of S3 keys to the supplied local directory, returns a list containing the local paths
+
+    Args:
+        keys (list):
+        local_save_directory (str):
+    Returns: (list):
+    """
+    local_paths = []
+    for key in keys:
+        local_path = '{}/{}'.format(local_save_directory, key.name)
+
+        with open(local_path, 'wb') as f:
+            if key.get_contents_to_file(f):
+                logger.info('%s saved to %s', key.name, local_path)
+                local_paths.append(local_path)
+            else:
+                logger.warning('%s was not saved to %s', key.name, local_path)
+                raise boto.exception.S3DataError('{} was not saved to {}'.format(key.name, local_path))
+
+    return local_paths
+
+
+def get_s3_filename(s3_path):
+    """Fetches the filename of a key from S3
+    Args:
+        s3_path (str):
+    Returns (str):
+    """
+    if s3_path.split('/')[-1] == '':
+        return ValueError('Supplied S3 path: {} is a directory not a file path'.format(s3_path))
+    return s3_path.split('/')[-1]
+
+
+def is_s3_exception(exception):
+    """Check for S3 conn related exceptions.
+
+    Used to decide whether we should retry s3 related action.
+    Args:
+        exception (Exception):
+    Returns (boolean):
+    """
+    return isinstance(exception, (AWSConnectionError, S3ResponseError))
+
+
+def upload_file(bucket, local_file_path, remote_dest_path):
+    """Upload a file to a S3 location.
+
+    Args:
+        bucket (boto s3 bucket obj):
+        local_file_path (str): representation of the location of a file to be uploaded.
+        remote_dest_path (str): representation of the destination path the file should be uploaded to.
+    """
+    k = Key(bucket)
+    k.key = remote_dest_path
+    k.set_contents_from_filename(local_file_path)
