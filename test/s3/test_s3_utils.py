@@ -2,6 +2,7 @@ import uuid, os
 from collections import namedtuple
 import boto, boto3, moto
 import pytest
+import re
 from pytest import raises
 
 try:
@@ -11,7 +12,8 @@ except ImportError:
 
 from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, \
     path_contains_data, save_to_s3, \
-    setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory, rename_keys_on_s3, rename_s3_key
+    setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory, rename_keys_on_s3, rename_s3_key, \
+    fetch_s3_filepaths_to_local, get_s3_filename, get_s3_keys_by_regex
 
 TEST_BUCKET = 'audience-data-store-qa'
 TEST_INP_PREFIX = 'integration-tests/s3_utils_input'
@@ -34,6 +36,7 @@ FILES_CONTENT = {
     'other': LONG_STRING,
 }
 OUTPUT = '%s/%s' % (TEST_OUT_PREFIX, 'merged.gz')
+TEST_FILE_CONTENT = 'a'
 
 Key = namedtuple('Key', ['name', 'size'])
 
@@ -104,7 +107,7 @@ def _create_file(file_path, bucket_name=TEST_BUCKET):
     conn = boto.connect_s3()
     bucket = conn.get_bucket(bucket_name)
     key = bucket.new_key(file_path)
-    key.set_contents_from_string('a')
+    key.set_contents_from_string(TEST_FILE_CONTENT)
 
     return bucket, key
 
@@ -252,3 +255,83 @@ def test_boto3_rename_keys_on_s3(boto3_client):
         assert rename_keys_on_s3(mock_bucket, TEST_REGION, TEST_INP_PREFIX,
                                  prefix_modification_func=None,
                                  filter_keys_func=mock_filter)
+
+
+@moto.mock_s3()
+def test_fetch_s3_filepaths_to_local(tmpdir):
+    test_bucket = TEST_BUCKET + 'test'
+    boto.connect_s3().create_bucket(test_bucket)
+    s3_directory = 'my/test/root/directory/'
+    local_directory = tmpdir.dirname + '/'
+
+    s3_keys = []
+    for i in range(10):
+        _, key = _create_file(s3_directory + str(uuid.uuid4()), bucket_name=test_bucket)
+        s3_keys.append(key)
+
+    local_filepaths = fetch_s3_filepaths_to_local(s3_keys, local_directory)
+    assert len(local_filepaths) == 10
+    print tmpdir.dirname
+    for local_file in local_filepaths:
+        with open(local_file) as f:
+            assert f.read() == TEST_FILE_CONTENT
+
+
+@moto.mock_s3()
+@pytest.mark.parametrize(('s3_file_path', 'expected'), [
+    ('my/test/file.txt', 'file.txt'),
+    ('my/test', 'test'),
+    ('my', 'my')])
+def test_get_s3_filename(s3_file_path, expected):
+    test_bucket = TEST_BUCKET + 'test'
+    boto.connect_s3().create_bucket(test_bucket)
+    _, key = _create_file(s3_file_path, bucket_name=test_bucket)
+    s3_filename = get_s3_filename(s3_file_path)
+    assert s3_filename == expected
+
+
+@moto.mock_s3()
+@pytest.mark.parametrize(('s3_file_path'), [
+    ('my/test/'),
+    ('my/')])
+def test_get_s3_filename_error(s3_file_path):
+    test_bucket = TEST_BUCKET + 'test'
+    boto.connect_s3().create_bucket(test_bucket)
+    _, key = _create_file(s3_file_path, bucket_name=test_bucket)
+    with pytest.raises(ValueError):
+        get_s3_filename(s3_file_path)
+
+
+@moto.mock_s3()
+def test_get_s3_keys_by_regex():
+    test_bucket = TEST_BUCKET + 'test'
+    conn = boto.connect_s3()
+    conn.create_bucket(test_bucket)
+    bucket = conn.get_bucket(test_bucket)
+
+    s3_directory = 'my/test/root/directory/'
+    for i in range(5):
+        _, key = _create_file(s3_directory + 'segment_{}'.format(str(i)), bucket_name=test_bucket)
+    _create_file(s3_directory + '_SUCCESS_', bucket_name=test_bucket)
+
+    pattern = re.compile('segment_\d+')
+    x = get_s3_keys_by_regex(bucket, s3_directory, pattern)
+    assert len(x) == 5
+
+
+@moto.mock_s3()
+def test_get_s3_keys_by_regex_no_files():
+    test_bucket = TEST_BUCKET + 'test'
+    conn = boto.connect_s3()
+    conn.create_bucket(test_bucket)
+    bucket = conn.get_bucket(test_bucket)
+
+    s3_directory = 'my/test/root/directory/'
+    _create_file(s3_directory + '_SUCCESS_', bucket_name=test_bucket)
+
+    pattern = re.compile('segment_\d+')
+    with pytest.raises(ValueError):
+        get_s3_keys_by_regex(bucket, s3_directory, pattern)
+
+
+

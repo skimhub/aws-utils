@@ -504,6 +504,7 @@ def get_s3_keys_by_regex(s3_bucket, s3_directory, pattern):
     s3_filepaths = [key for key in bucket_contents if pattern.search(key.name)]
     if not s3_filepaths:
         raise ValueError('No valid segment files found in {}'.format(s3_directory))
+    return s3_filepaths
 
 
 def fetch_s3_filepaths_to_local(keys, local_save_directory):
@@ -516,15 +517,12 @@ def fetch_s3_filepaths_to_local(keys, local_save_directory):
     """
     local_paths = []
     for key in keys:
-        local_path = '{}{}'.format(local_save_directory, key.name)
+        local_path = '{}{}'.format(local_save_directory, get_s3_filename(key.name))
 
         with open(local_path, 'wb') as f:
-            if key.get_contents_to_file(f):
-                logger.info('%s saved to %s', key.name, local_path)
-                local_paths.append(local_path)
-            else:
-                logger.warning('%s was not saved to %s', key.name, local_path)
-                raise boto.exception.S3DataError('{} was not saved to {}'.format(key.name, local_path))
+            key.get_contents_to_file(f)
+            logger.info('%s saved to %s', key.name, local_path)
+            local_paths.append(local_path)
 
     return local_paths
 
@@ -536,7 +534,7 @@ def get_s3_filename(s3_path):
     Returns (str):
     """
     if s3_path.split('/')[-1] == '':
-        return ValueError('Supplied S3 path: {} is a directory not a file path'.format(s3_path))
+        raise ValueError('Supplied S3 path: {} is a directory not a file path'.format(s3_path))
     return s3_path.split('/')[-1]
 
 
@@ -551,14 +549,14 @@ def is_s3_exception(exception):
     return isinstance(exception, (AWSConnectionError, S3ResponseError))
 
 
-def upload_file(bucket, local_file_path, remote_dest_path):
+def upload_file(bucket, local_file_path, remote_destination_path):
     """Upload a file to a S3 location.
 
     Args:
         bucket (boto s3 bucket obj):
         local_file_path (str): representation of the location of a file to be uploaded.
-        remote_dest_path (str): representation of the destination path the file should be uploaded to.
+        remote_destination_path (str): representation of the destination path the file should be uploaded to.
     """
     k = Key(bucket)
-    k.key = remote_dest_path
+    k.key = remote_destination_path
     k.set_contents_from_filename(local_file_path)
