@@ -332,6 +332,3 @@ def test_get_s3_keys_by_regex_no_files():
     pattern = re.compile('segment_\d+')
     with pytest.raises(ValueError):
         get_s3_keys_by_regex(bucket, s3_directory, pattern)
-
-
-

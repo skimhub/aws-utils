@@ -490,30 +490,26 @@ def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modificati
                 logger.error('Unable to rename key prefix {}, {}'.format(current_prefix, e[0]))
 
 
-def get_s3_keys_by_regex(s3_bucket, s3_directory, pattern):
+def fetch_s3_keys_by_regex_pattern(s3_bucket, s3_directory, pattern):
     """Fetches the s3 keys of all files within the supplied directory using a regex
 
     Args:
-        s3_bucket (s3 bucket obj):
-        s3_directory (str):
-        pattern (regex pattern obj)
-    Returns: ([boto s3 key, boto s3 key...]):
-    Raises: ValueError
+        s3_bucket (boto.s3.bucket.Bucket):
+        s3_directory (str): 'production/output/'
+        pattern (re.RegexObject): compiled regex pattern, e.g re.compile('.*\d+$')
+    Returns: ([boto.s3.key.Key, boto.s3.key.Key...]):
     """
     bucket_contents = s3_bucket.list(s3_directory)
-    s3_filepaths = [key for key in bucket_contents if pattern.search(key.name)]
-    if not s3_filepaths:
-        raise ValueError('No valid segment files found in {}'.format(s3_directory))
-    return s3_filepaths
+    return [key for key in bucket_contents if pattern.search(key.name)]
 
 
 def fetch_s3_filepaths_to_local(keys, local_save_directory):
     """Saves a list of S3 keys to the supplied local directory, returns a list containing the local paths
 
     Args:
-        keys (list):
-        local_save_directory (str):
-    Returns: (list):
+        keys ([boto.s3.key.Key, boto.s3.key.Key...]):
+        local_save_directory (str): '/usr/local/'
+    Returns: ([str, str...]): ['/usr/local/part-000.gz', '/usr/local/part/part-001.gz']
     """
     local_paths = []
     for key in keys:
@@ -530,8 +526,8 @@ def fetch_s3_filepaths_to_local(keys, local_save_directory):
 def get_s3_filename(s3_path):
     """Fetches the filename of a key from S3
     Args:
-        s3_path (str):
-    Returns (str):
+        s3_path (str): 'production/output/file.txt'
+    Returns (str): 'file.txt'
     """
     if s3_path.split('/')[-1] == '':
         raise ValueError('Supplied S3 path: {} is a directory not a file path'.format(s3_path))
@@ -553,9 +549,9 @@ def upload_file(bucket, local_file_path, remote_destination_path):
     """Upload a file to a S3 location.
 
     Args:
-        bucket (boto s3 bucket obj):
-        local_file_path (str): representation of the location of a file to be uploaded.
-        remote_destination_path (str): representation of the destination path the file should be uploaded to.
+        bucket (boto.s3.bucket.Bucket):
+        local_file_path (str): '/usr/local/file.txt'
+        remote_destination_path (str): production/output/file.txt
     """
     k = Key(bucket)
     k.key = remote_destination_path
