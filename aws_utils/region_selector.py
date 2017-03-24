@@ -4,6 +4,8 @@ import boto3
 
 US_EAST_REGION = {'us-east-1'}
 
+US_EAST_AVAILABILITY_ZONES = {'us-east-1a', 'us-east-1b', 'us-east-1c', 'us-east-1e'} # note d is missing
+
 INSTANCE_VERSION = 'Linux/UNIX (Amazon VPC)'
 
 
@@ -45,7 +47,8 @@ def fetch_spot_prices(region, start_time, end_time, instance_type, instance_vers
         token = res['NextToken']
 
 
-def fetch_price_stats_per_availability_zone(region, start_time, end_time, instance_type, instance_version=INSTANCE_VERSION):
+def fetch_price_stats_per_availability_zone(region, start_time, end_time, instance_type, instance_version=INSTANCE_VERSION,
+                                            filter_availability_zones=None):
     """Groups raw prices by region, returns min, max and avg price.
 
     Args:
@@ -54,6 +57,7 @@ def fetch_price_stats_per_availability_zone(region, start_time, end_time, instan
         end_time (datetime.datetime):
         instance_type (str):
         instance_version (str): the types of instances that we wish to return prices for.
+        filter_availability_zones ({str}): if set then we only return a price if the availability zone is in this list
 
     Returns: dict,
         {'us-east-1b': {'min': 2.01, 'max': 3.53,'avg':2.8, 'latest':3.0}}
@@ -64,20 +68,23 @@ def fetch_price_stats_per_availability_zone(region, start_time, end_time, instan
 
     prices_per_region = {}
     for zone, prices in by_zone.iteritems():
-        region_prices = {'min': min(prices),
-                         'max': max(prices),
-                         'avg': sum(prices) / float(len(prices)),
-                         'latest': prices[0]}
-        prices_per_region[zone] = region_prices
+        if filter_availability_zones is None or zone in filter_availability_zones:
+            region_prices = {'min': min(prices),
+                             'max': max(prices),
+                             'avg': sum(prices) / float(len(prices)),
+                             'latest': prices[0]}
+            prices_per_region[zone] = region_prices
 
     return prices_per_region
 
 
-def get_cheapest_availability_zone(instance_type, search_regions=US_EAST_REGION, expected_job_length=datetime.timedelta(days=1)):
+def get_cheapest_availability_zone(instance_type, search_regions=US_EAST_REGION,
+                                   filter_availability_zones=US_EAST_AVAILABILITY_ZONES, expected_job_length=datetime.timedelta(days=1)):
     """Get the cheapest availability zone from a set of regions. Cheapest is determined by 'latest price + average price'
     over the duration that the job is expected to run for
 
     Args:
+        filter_availability_zones ({str}): We only return results for zones in this set
         instance_type (str): Type of aws instance e.g. "m2.4xlarge"
         search_regions ({str}): Set of regions we want to look for availability zones in.
         expected_job_length (datetime.timedelta): The period we expect the job to run this is used as the amount of time to look back over
@@ -94,7 +101,8 @@ def get_cheapest_availability_zone(instance_type, search_regions=US_EAST_REGION,
         result_stats = fetch_price_stats_per_availability_zone(region,
                                                                datetime.datetime.utcnow() - expected_job_length,
                                                                datetime.datetime.utcnow(),
-                                                               instance_type)
+                                                               instance_type,
+                                                               filter_availability_zones=filter_availability_zones)
 
         if not len(result_stats):
             raise Exception("No valid avialability zones found for region %s" % (region,))
