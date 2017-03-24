@@ -64,7 +64,7 @@ def get_date_range(from_date, to_date):
     Returns list(Date):
     """
     if from_date > to_date:
-        raise ValueError('from_date %s is > to_date %s', from_date, to_date)
+        raise ValueError('The start date {} is > the end date'.format(from_date, to_date))
     return rrule.rrule(rrule.DAILY, dtstart=from_date, until=to_date)
 
 
