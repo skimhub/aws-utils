@@ -1,12 +1,12 @@
 from setuptools import setup, find_packages
 
 package = 'aws-utils'
-version = '0.3.3'
+version = '0.3.4'
 
 INSTALL_REQUIRES = [
     'boto>=2.38.0',
     'boto3>=1.2.3',
-    'smart_open==1.3.2',  # smart open must be 1.3.2 because in 1.3.3 onward the gzip write functionality has been removed
+    'smart_open==1.3.2',
     'dateutils>=0.6.6',
     'retrying>=1.3.3'
 ]
