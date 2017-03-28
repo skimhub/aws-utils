@@ -11,6 +11,7 @@ from boto.s3.key import Key
 from retrying import retry
 from boto.s3.bucket import Bucket
 from dateutil import rrule
+from datetime import datetime
 
 
 # python version backwards compatibility
@@ -53,6 +54,19 @@ def get_date_paths(from_date, to_date, prefix_tmpl=STD_DATE_PREFIX):
     """
     return [get_date_prefix(d, prefix_tmpl)
             for d in _iterate_days(from_date, to_date)]
+
+
+def get_date_range(from_date, to_date):
+    """Returns a range of dates
+    Args:
+        from_date(Date):
+        to_date(Date):
+
+    Returns list(Date):
+    """
+    if from_date > to_date:
+        raise ValueError('The start date {} is > the end date'.format(from_date, to_date))
+    return rrule.rrule(rrule.DAILY, dtstart=from_date, until=to_date)
 
 
 def get_filesize(bucket, path):
