@@ -13,7 +13,7 @@ except ImportError:
 from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, \
     path_contains_data, save_to_s3, \
     setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory, rename_keys_on_s3, rename_s3_key, \
-    fetch_s3_filepaths_to_local, get_s3_filename, get_s3_keys_by_regex
+    fetch_s3_filepaths_to_local, get_s3_filename, fetch_s3_keys_by_regex_pattern
 
 TEST_BUCKET = 'audience-data-store-qa'
 TEST_INP_PREFIX = 'integration-tests/s3_utils_input'
@@ -315,7 +315,7 @@ def test_get_s3_keys_by_regex():
     _create_file(s3_directory + '_SUCCESS_', bucket_name=test_bucket)
 
     pattern = re.compile('segment_\d+')
-    x = get_s3_keys_by_regex(bucket, s3_directory, pattern)
+    x = fetch_s3_keys_by_regex_pattern(bucket, s3_directory, pattern)
     assert len(x) == 5
 
 
@@ -330,5 +330,4 @@ def test_get_s3_keys_by_regex_no_files():
     _create_file(s3_directory + '_SUCCESS_', bucket_name=test_bucket)
 
     pattern = re.compile('segment_\d+')
-    with pytest.raises(ValueError):
-        get_s3_keys_by_regex(bucket, s3_directory, pattern)
+    assert fetch_s3_keys_by_regex_pattern(bucket, s3_directory, pattern) == []
