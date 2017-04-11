@@ -1,5 +1,7 @@
 import copy
 
+DEFAULT_EMR = 'emr-4.6.0'
+
 INSTANCE = {
     'InstanceGroups': [
         {
@@ -52,11 +54,12 @@ BOOTSTRAP_ACTION = {
 }
 
 
-def _get_cluster_config(name, billing, billing_secondary, billing_tag, log_uri, configurations_config, instance_template):
+def _get_cluster_config(name, billing, billing_secondary, billing_tag, log_uri, configurations_config,
+                        instance_template, emr_image=DEFAULT_EMR):
     return {
         'Name': name,  # name of the EMR cluster
         'VisibleToAllUsers': True,
-        'ReleaseLabel': 'emr-4.6.0',
+        'ReleaseLabel': emr_image,
         'JobFlowRole': 'EMR_EC2_DefaultRole',
         'ServiceRole': 'EMR_DefaultRole',
         'LogUri': log_uri,  # EMR log uri
@@ -90,6 +93,7 @@ STEP = {
 
 def construct_base_cluster(instances, instance_type, bid_price, vpc_subnet, cluster_name, billing_tag, cluster_log_uri,
                            billing, billing_secondary,
+                           emr_image=DEFAULT_EMR,
                            on_demand=None,
                            keep_alive=None):
     """Returns a completed boto3 cluster configuration without steps.
@@ -147,7 +151,7 @@ def construct_base_cluster(instances, instance_type, bid_price, vpc_subnet, clus
 
     # Update general cluster settings
     cluster_config = _get_cluster_config(cluster_name, billing, billing_secondary, billing_tag, cluster_log_uri, configurations_config,
-                                         instance_template)
+                                         instance_template, emr_image)
 
     return cluster_config
 
