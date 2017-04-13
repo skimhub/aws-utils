@@ -99,12 +99,18 @@ def save_to_s3(bucket, path, data, compress=False):
     key.set_contents_from_string(data)
 
 
-def get_from_s3(bucket, path):
+def get_from_s3(bucket, path, compressed=False):
     bucket = get_bucket(bucket)
 
     k = Key(bucket)
     k.key = path
-    return k.get_contents_as_string()
+    data = k.get_contents_as_string()
+
+    if compressed:
+        with gzip.GzipFile(fileobj=StringIO(data), mode="r") as f:
+            data = f.read()
+
+    return data
 
 
 def delete_path(bucket, path):
