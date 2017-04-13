@@ -342,8 +342,8 @@ def load_pickle_from_s3(bucket, path):
         return pickle.loads(pkl)  # python2
 
 
-def load_jsonfile_from_s3(bucket, path):
-    file_contents = get_from_s3(bucket, path).decode('utf-8')
+def load_jsonfile_from_s3(bucket, path, **kwargs):
+    file_contents = get_from_s3(bucket, path, **kwargs).decode('utf-8')
     return [json.loads(item) for item in file_contents.splitlines()]
 
 
