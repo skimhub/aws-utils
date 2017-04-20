@@ -11,4 +11,9 @@ def shallow_word_segment(phrase):
     Returns:
         ([str]): list of words segmented
     """
-    return re.findall(r'[^_\W]+', phrase, flags=re.UNICODE)
+    raw_words = re.findall(r'[^_\W]+', phrase, flags=re.UNICODE)
+    for word in raw_words:
+        try:
+            yield word.encode('utf-8')
+        except UnicodeEncodeError:
+            continue
