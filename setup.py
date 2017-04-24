@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 package = 'aws-utils'
-version = '0.4.1'
+version = '0.4.2'
 
 INSTALL_REQUIRES = [
     'boto>=2.38.0',# need to stay in this version as sqs.get_queue function stops working when we upgrade
