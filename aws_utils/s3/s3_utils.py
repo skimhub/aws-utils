@@ -350,6 +350,11 @@ def load_jsonfile_from_s3(bucket, path, **kwargs):
     return [json.loads(item) for item in file_contents.splitlines()]
 
 
+def save_jsonfile_to_s3(bucket, path, items, **kwargs):
+    file_contents = "\n".join(json.dumps(item) for item in items)
+    save_to_s3(bucket, path, file_contents, **kwargs)
+
+
 def get_bucket_and_path_from_uri(path):
     """Returns a list containing S3 bucket and path from a URI.
 
