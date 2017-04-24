@@ -1,5 +1,6 @@
 import gzip
 import json
+from io import BytesIO
 import logging
 import boto
 import boto3 as boto3
@@ -90,8 +91,10 @@ def save_to_s3(bucket, path, data, compress=False):
     logger.debug("Uploading to %s", key.key)
 
     if compress:
-        mock_file = StringIO()
+        mock_file = BytesIO()
         gzip_obj = gzip.GzipFile(filename='gzipped_file', mode='wb', fileobj=mock_file)
+        if isinstance(data, str):
+            data = data.encode('utf-8')
         gzip_obj.write(data)
         gzip_obj.close()
         data = mock_file.getvalue()
@@ -107,7 +110,7 @@ def get_from_s3(bucket, path, compressed=False):
     data = k.get_contents_as_string()
 
     if compressed:
-        with gzip.GzipFile(fileobj=StringIO(data), mode="r") as f:
+        with gzip.GzipFile(fileobj=BytesIO(data), mode="r") as f:
             data = f.read()
 
     return data
