@@ -1,5 +1,6 @@
 import gzip
 import json
+from io import BytesIO
 import logging
 import boto
 import boto3 as boto3
@@ -90,8 +91,10 @@ def save_to_s3(bucket, path, data, compress=False):
     logger.debug("Uploading to %s", key.key)
 
     if compress:
-        mock_file = StringIO()
+        mock_file = BytesIO()
         gzip_obj = gzip.GzipFile(filename='gzipped_file', mode='wb', fileobj=mock_file)
+        if isinstance(data, str):
+            data = data.encode('utf-8')
         gzip_obj.write(data)
         gzip_obj.close()
         data = mock_file.getvalue()
@@ -99,12 +102,18 @@ def save_to_s3(bucket, path, data, compress=False):
     key.set_contents_from_string(data)
 
 
-def get_from_s3(bucket, path):
+def get_from_s3(bucket, path, compressed=False):
     bucket = get_bucket(bucket)
 
     k = Key(bucket)
     k.key = path
-    return k.get_contents_as_string()
+    data = k.get_contents_as_string()
+
+    if compressed:
+        with gzip.GzipFile(fileobj=BytesIO(data), mode="r") as f:
+            data = f.read()
+
+    return data
 
 
 def delete_path(bucket, path):
@@ -336,8 +345,8 @@ def load_pickle_from_s3(bucket, path):
         return pickle.loads(pkl)  # python2
 
 
-def load_jsonfile_from_s3(bucket, path):
-    file_contents = get_from_s3(bucket, path).decode('utf-8')
+def load_jsonfile_from_s3(bucket, path, **kwargs):
+    file_contents = get_from_s3(bucket, path, **kwargs).decode('utf-8')
     return [json.loads(item) for item in file_contents.splitlines()]
 
 
