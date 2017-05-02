@@ -4,7 +4,6 @@ import time
 
 import boto
 
-
 try:
     import configparser
 except ImportError:
