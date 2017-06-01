@@ -596,20 +596,17 @@ def get_latest_year_month_day_prefix(s3_path):
     Returns (Date): e.g datetime.date(2017, 5, 30)
 
     """
-    latest = date.min()
+    latest = date.min
     keys = get_contents_of_directory(s3_path)
 
     for key in keys:
         search = re.search(r'.*year=(\d{4}).*month=(\d{2}).*day=(\d{2})', key)
         if search:
-            year = int(search.group(1))
-            month = int(search.group(2))
-            day = int(search.group(3))
-            bucket_date = date(year, month, day)
-
+            year, month, day = search.groups()
+            bucket_date = date(int(year), int(month), int(day))
             if bucket_date > latest:
                 latest = bucket_date
 
-    if latest == date.min():
+    if latest == date.min:
         return None
     return latest
