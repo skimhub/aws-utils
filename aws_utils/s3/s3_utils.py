@@ -5,6 +5,8 @@ import logging
 import boto
 import boto3 as boto3
 import smart_open
+import re
+from datetime import date
 from boto.exception import S3ResponseError, AWSConnectionError
 from botocore.exceptions import ClientError
 from boto.s3.connection import OrdinaryCallingFormat
@@ -12,7 +14,6 @@ from boto.s3.key import Key
 from retrying import retry
 from boto.s3.bucket import Bucket
 from dateutil import rrule
-from datetime import datetime
 
 
 # python version backwards compatibility
@@ -585,3 +586,30 @@ def upload_file(bucket, local_file_path, remote_destination_path):
     k = Key(bucket)
     k.key = remote_destination_path
     k.set_contents_from_filename(local_file_path)
+
+
+def get_latest_year_month_day_prefix(s3_path):
+    """Gets the date of the most recent year/month/day prefix in a S3 folder
+    Args:
+        s3_path (str): e.g s3n://audience-data-store-qa/artem/
+
+    Returns (Date): e.g datetime.date(2017, 5, 30)
+
+    """
+    latest = date.min()
+    keys = get_contents_of_directory(s3_path)
+
+    for key in keys:
+        search = re.search(r'.*year=(\d{4}).*month=(\d{2}).*day=(\d{2})', key)
+        if search:
+            year = int(search.group(1))
+            month = int(search.group(2))
+            day = int(search.group(3))
+            bucket_date = date(year, month, day)
+
+            if bucket_date > latest:
+                latest = bucket_date
+
+    if latest == date.min():
+        return None
+    return latest
