@@ -1,4 +1,4 @@
-import uuid, os
+import uuid, os, datetime
 from collections import namedtuple
 import boto, boto3, moto
 import pytest
@@ -13,7 +13,7 @@ except ImportError:
 from aws_utils.s3.s3_utils import merge_part_files, get_from_s3, partition_list, load_pickle_from_s3, file_size, \
     path_contains_data, save_to_s3, \
     setup_bucket, delete_contents_of_s3_directory, get_contents_of_directory, rename_keys_on_s3, rename_s3_key, \
-    fetch_s3_filepaths_to_local, get_s3_filename, fetch_s3_keys_by_regex_pattern
+    fetch_s3_filepaths_to_local, get_s3_filename, fetch_s3_keys_by_regex_pattern, get_latest_year_month_day_prefix
 
 TEST_BUCKET = 'audience-data-store-qa'
 TEST_INP_PREFIX = 'integration-tests/s3_utils_input'
@@ -331,3 +331,20 @@ def test_get_s3_keys_by_regex_no_files():
 
     pattern = re.compile('segment_\d+')
     assert fetch_s3_keys_by_regex_pattern(bucket, s3_directory, pattern) == []
+
+
+@moto.mock_s3()
+@pytest.mark.parametrize(("prefix", "content", "expected"), [
+    ('test/', ['year=2017/month=01/day=02', 'year=2016/month=01/day=30'], datetime.date(2017, 1, 2)),
+    ('test/', ['year=2017/month=01/day=02', 'year=2016/month=01/file'], datetime.date(2017, 1, 2)),
+    ('test/', ['year=2017/month=01/day=02'], datetime.date(2017, 1, 2)),
+    ('test/', ['year=2017/month=01', 'year=2016/day=30'], None),
+    ('test/', ['year=2017/month=01/random_filename'], None)
+])
+def test_get_latest_year_month_day_prefix(prefix, content, expected):
+    test_bucket = TEST_BUCKET + 'test'
+    boto.connect_s3().create_bucket(test_bucket)
+    for key in content:
+        _create_file(prefix + key, bucket_name=test_bucket)
+
+    assert get_latest_year_month_day_prefix('s3n://{}/{}'.format(test_bucket, prefix)) == expected
