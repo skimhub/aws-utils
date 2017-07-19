@@ -345,6 +345,17 @@ def load_pickle_from_s3(bucket, path):
     except TypeError:
         return pickle.loads(pkl)  # python2
 
+def save_pickle_to_s3(bucket, path, data):
+    """saves a python object as a pickle in s3
+
+    Args:
+        bucket (str or Bucket): Bucket to add the file to, if a string is provided, we try and open an amazon bucket with that name.
+        path (str): Path within the bucket to save the file to, should not contain the bucket name
+        data (Object): any python serializable object or value
+    """
+    pickled_data = pickle.dumps(data)
+    save_to_s3(bucket, path, pickled_data)
+
 
 def load_jsonfile_from_s3(bucket, path, **kwargs):
     file_contents = get_from_s3(bucket, path, **kwargs).decode('utf-8')
