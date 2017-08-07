@@ -495,6 +495,28 @@ def rename_s3_key(boto3_client, bucket_name, old_prefix, new_prefix):
     else:
         logger.warn('Source and destination paths are the same')
 
+def get_pickle_from_s3(path):
+    """ Loads an object from s3 and depickles, uses full path
+    Args:
+        path (str):
+    Returns:
+        object: depickled s3 object
+    """
+    return load_pickle_from_s3(*load_bucket_and_path(path))
+
+def load_bucket_and_path(path):
+    """
+    Examples:
+        load_bucket_and_path("s3://mybucket/mydir/mypickle.pkl") == (bucket, "mydir/mypickle.pkl")
+    Args:
+        path (str): path to s3 file including bucket name
+    Returns:
+        tuple(boto.Object, string): Bucket and path to object in bucket
+    """
+    bucket_name, path = get_bucket_and_path_from_uri(path)
+    bucket = setup_bucket(bucket_name)
+    return bucket, path
+
 
 def rename_keys_on_s3(bucket_name, bucket_region, prefix_root, prefix_modification_func,
                       filter_keys_func=None):
