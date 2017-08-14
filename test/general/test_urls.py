@@ -44,16 +44,3 @@ def test_domain_extract(url, expected):
     out = urls.domain_extract(url)
     assert out == expected
 
-@pytest.mark.parametrize(('input', 'expected'), [
-    ('', u''),
-    ('bacon', u'bacon'),
-    ('b\xc3\xa5con', u'båcon'),  # utf8
-    ('b\xe5con', u'båcon'),  # windows-1252
-    (u'煎餅'.encode('GBK'), u'¼åïž')
-])
-def test_decode_to_unicode(input, expected):
-    """Ensure default decoding (utf8 and windows-1252) works as expected."""
-    actual = urls.decode_to_unicode(input)
-
-    assert actual == expected
-    assert isinstance(actual, unicode)

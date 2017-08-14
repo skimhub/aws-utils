@@ -2,6 +2,8 @@ import re
 from urllib import unquote_plus
 from urlparse import urlparse
 
+from aws_utils.general.strings import decode_str_to_unicode
+
 HTTP_CHECK = r'^http.?:\/\/'
 
 def fully_unquote_plus(s):
@@ -21,19 +23,16 @@ def fully_unquote_plus(s):
 
 
 def decode_to_unicode(uri_component):
-    """Attempt to decode a byte string of potentially unknown encoding. Currently a very simplistic implementation.
+    """Attempt to decode a uri of potentially unknown encoding. Currently a very simplistic implementation.
     First try unicode-8 and try windows alternatively
     Args:
         uri_component (str) : string of unknown encoding
 
     Returns:
-        uri_component (str) : string
+        str : string
     """
-    try:
-        return uri_component.decode('utf-8')
-    except UnicodeDecodeError:
-        #  try to encode in windows encoding
-        return uri_component.decode('windows-1252', errors='replace')
+    # TODO: evaluate feasibility of using idna decodeing instead
+    return decode_str_to_unicode(uri_component)
 
 
 def _url_parser(url):
